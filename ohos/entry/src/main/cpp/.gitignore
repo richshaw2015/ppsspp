@@ -1,0 +1,21 @@
+# CMake 生成文件
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# 编译输出
+*.o
+*.a
+*.so
+*.dylib
+
+# IDE 文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 调试文件
+*.dSYM/

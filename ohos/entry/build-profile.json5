@@ -1,0 +1,38 @@
+{
+  "apiType": "stageMode",
+  "buildOption": {
+    "resOptions": {
+      "copyCodeResource": {
+        "enable": false
+      }
+    },
+    "externalNativeOptions": {
+      "path": "./src/main/cpp/CMakeLists.txt",
+      "arguments": "-DOHOS_STL=c++_shared",
+      "cppFlags": "-std=c++17",
+    }
+  },
+  "buildOptionSet": [
+    {
+      "name": "release",
+      "arkOptions": {
+        "obfuscation": {
+          "ruleOptions": {
+            "enable": true,
+            "files": ["./obfuscation-rules.txt"],
+          }
+        }
+      }
+    },
+  ],
+  "targets": [
+    {
+      "name": "default",
+      "runtimeOS": "HarmonyOS"
+    },
+    {
+      "name": "release",
+      "runtimeOS": "HarmonyOS"
+    }
+  ]
+}

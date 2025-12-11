@@ -1,0 +1,44 @@
+# HarmonyOS / DevEco Studio
+.idea/
+.hvigor/
+oh_modules/
+node_modules/
+build/
+.cxx/
+local.properties
+
+# Build outputs
+*.hap
+*.app
+entry/build/
+AppScope/build/
+
+# Logs
+*.log
+build.log
+
+# Native
+*.o
+*.so
+*.a
+.externalNativeBuild/
+
+# Gradle
+.gradle/
+gradle.properties
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Backup files
+*~
+*.bak
+*.swp
+
+# IDE
+*.iml
+.vscode/

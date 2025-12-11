@@ -1,0 +1,92 @@
+{
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "debug",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "/Users/neo/keys/ohos.p12",
+          "storePassword": "0000001B0484EFE4E550A246EA4A1C1B30932DE3BAE08528D16F222B36361B2F45BC7C0A2C5094B9E86FBA",
+          "keyAlias": "ohos",
+          "keyPassword": "0000001B3D3CE5B3144484BAD46A86C1622FEE71BE7A90C475AFC811C61173AD9749A4E01348214A9BC0CA",
+          "signAlg": "SHA256withECDSA",
+          "profile": "/Users/neo/keys/psp.debugDebug.p7b",
+          "certpath": "/Users/neo/keys/debug.cer"
+        }
+      },
+      {
+        "name": "release",
+        "type": "HarmonyOS",
+        "material": {
+          "storeFile": "/Users/neo/keys/ohos.p12",
+          "storePassword": "0000001B0484EFE4E550A246EA4A1C1B30932DE3BAE08528D16F222B36361B2F45BC7C0A2C5094B9E86FBA",
+          "keyAlias": "ohos",
+          "keyPassword": "0000001B3D3CE5B3144484BAD46A86C1622FEE71BE7A90C475AFC811C61173AD9749A4E01348214A9BC0CA",
+          "signAlg": "SHA256withECDSA",
+          "profile": "/Users/neo/keys/pspRelease.p7b",
+          "certpath": "/Users/neo/keys/ohos.cer"
+        }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "debug",
+        "targetSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      },
+      {
+        "name": "release",
+        "signingConfig": "release",
+        "targetSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+        "buildOption": {
+          "debuggable": false,
+          "strictMode": {
+            "caseSensitiveCheck": true,
+            "useNormalizedOHMUrl": true
+          }
+        }
+      }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug"
+      },
+      {
+        "name": "profile"
+      },
+      {
+        "name": "release"
+      }
+    ]
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        },
+        {
+          "name": "release",
+          "applyToProducts": [
+            "release"
+          ]
+        }
+      ]
+    }
+  ]
+}
