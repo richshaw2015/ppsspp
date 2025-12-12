@@ -47,8 +47,22 @@ napi_value SendTouchEvent(napi_env env, napi_callback_info info);
 
 /**
  * 发送按键事件
+ * 参数: keyCode (number), isDown (boolean), isRepeat? (boolean), deviceId? (number)
+ * 返回: 是否消费了该按键
  */
 napi_value SendKeyEvent(napi_env env, napi_callback_info info);
+
+/**
+ * 发送单个手柄轴事件
+ * 参数: deviceId (number), axisId (number), value (number)
+ */
+napi_value SendAxisEvent(napi_env env, napi_callback_info info);
+
+/**
+ * 发送多个手柄轴事件（批量处理，更高效）
+ * 参数: deviceId (number), axisIds (number[]), values (number[])
+ */
+napi_value SendMultiAxisEvent(napi_env env, napi_callback_info info);
 
 /**
  * 获取配置

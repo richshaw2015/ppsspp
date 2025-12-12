@@ -14,6 +14,7 @@ struct Index {
   private xComponentController: XComponentController = new XComponentController();
   @State isInitialized: boolean = false;
   private context: common.UIAbilityContext = getContext() as common.UIAbilityContext;
+  private lastKeyCode: number = 0;  // 用于检测重复按键
 
   /**
    * 检查震动权限和设备支持
@@ -321,6 +322,23 @@ struct Index {
           .onDestroy(() => {
             console.info('[PPSSPP] XComponent onDestroy');
           })
+          .onKeyEvent((event: KeyEvent): void => {
+            // 处理按键事件（键盘、手柄等）
+            const isDown: boolean = event.type === KeyType.Down;
+            const isRepeat: boolean = event.type === KeyType.Down && event.keyCode === this.lastKeyCode;
+            this.lastKeyCode = isDown ? event.keyCode : 0;
+            
+            // 发送按键事件到 PPSSPP
+            // deviceId: 1 = 键盘
+            const consumed: boolean = ppsspp.sendKeyEvent(event.keyCode, isDown, isRepeat, 1);
+            
+            // 如果 PPSSPP 消费了按键，阻止默认行为
+            if (consumed) {
+              event.stopPropagation();
+            }
+          })
+          .focusable(true)
+          .defaultFocus(true)
           .width('100%')
           .height('100%')
       }

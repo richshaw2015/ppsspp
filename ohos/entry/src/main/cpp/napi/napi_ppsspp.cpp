@@ -140,12 +140,107 @@ napi_value SendTouchEvent(napi_env env, napi_callback_info info) {
 }
 
 napi_value SendKeyEvent(napi_env env, napi_callback_info info) {
-    int32_t keyCode = GetInt32Arg(env, info, 0);
-    bool isDown = GetBoolArg(env, info, 1);
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    OHOS_LOGD(NAPI_PPSSPP_TAG, "SendKeyEvent: keyCode=%{public}d, isDown=%{public}d", keyCode, isDown);
+    int32_t keyCode = 0;
+    bool isDown = false;
+    bool isRepeat = false;
+    int32_t deviceId = 0;
     
-    OhosInput::HandleKeyEvent(keyCode, isDown);
+    if (argc >= 1) napi_get_value_int32(env, args[0], &keyCode);
+    if (argc >= 2) napi_get_value_bool(env, args[1], &isDown);
+    if (argc >= 3) napi_get_value_bool(env, args[2], &isRepeat);
+    if (argc >= 4) napi_get_value_int32(env, args[3], &deviceId);
+    
+    OHOS_LOGD(NAPI_PPSSPP_TAG, "SendKeyEvent: keyCode=%{public}d, isDown=%{public}d, isRepeat=%{public}d, deviceId=%{public}d", 
+              keyCode, isDown, isRepeat, deviceId);
+    
+    bool consumed = OhosInput::HandleKeyEvent(keyCode, isDown, isRepeat, deviceId);
+    
+    napi_value result;
+    napi_get_boolean(env, consumed, &result);
+    return result;
+}
+
+napi_value SendAxisEvent(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGW(NAPI_PPSSPP_TAG, "SendAxisEvent: requires 3 arguments (deviceId, axisId, value)");
+        napi_value result;
+        napi_get_undefined(env, &result);
+        return result;
+    }
+    
+    int32_t deviceId = 0;
+    int32_t axisId = 0;
+    double value = 0.0;
+    
+    napi_get_value_int32(env, args[0], &deviceId);
+    napi_get_value_int32(env, args[1], &axisId);
+    napi_get_value_double(env, args[2], &value);
+    
+    OHOS_LOGD(NAPI_PPSSPP_TAG, "SendAxisEvent: deviceId=%{public}d, axisId=%{public}d, value=%{public}.3f", 
+              deviceId, axisId, value);
+    
+    OhosInput::HandleAxisEvent(deviceId, axisId, static_cast<float>(value));
+    
+    napi_value result;
+    napi_get_undefined(env, &result);
+    return result;
+}
+
+napi_value SendMultiAxisEvent(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGW(NAPI_PPSSPP_TAG, "SendMultiAxisEvent: requires 3 arguments (deviceId, axisIds[], values[])");
+        napi_value result;
+        napi_get_undefined(env, &result);
+        return result;
+    }
+    
+    int32_t deviceId = 0;
+    napi_get_value_int32(env, args[0], &deviceId);
+    
+    // 获取数组长度
+    uint32_t axisCount = 0;
+    napi_get_array_length(env, args[1], &axisCount);
+    
+    if (axisCount == 0) {
+        napi_value result;
+        napi_get_undefined(env, &result);
+        return result;
+    }
+    
+    // 读取轴 ID 和值
+    int* axisIds = new int[axisCount];
+    float* values = new float[axisCount];
+    
+    for (uint32_t i = 0; i < axisCount; i++) {
+        napi_value axisIdVal, valueVal;
+        napi_get_element(env, args[1], i, &axisIdVal);
+        napi_get_element(env, args[2], i, &valueVal);
+        
+        int32_t axisId = 0;
+        double value = 0.0;
+        napi_get_value_int32(env, axisIdVal, &axisId);
+        napi_get_value_double(env, valueVal, &value);
+        
+        axisIds[i] = axisId;
+        values[i] = static_cast<float>(value);
+    }
+    
+    OhosInput::HandleMultiAxisEvent(deviceId, axisIds, values, axisCount);
+    
+    delete[] axisIds;
+    delete[] values;
     
     napi_value result;
     napi_get_undefined(env, &result);

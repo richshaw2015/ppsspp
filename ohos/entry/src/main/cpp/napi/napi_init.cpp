@@ -338,12 +338,7 @@ static napi_value SendTouchEvent(napi_env env, napi_callback_info info) {
     return nullptr;
 }
 
-/**
- * 发送按键事件
- */
-static napi_value SendKeyEvent(napi_env env, napi_callback_info info) {
-    return nullptr;
-}
+// SendKeyEvent 已移至 NapiPPSSPP::SendKeyEvent
 
 /**
  * 从 exports 中获取 XComponent 并注册回调
@@ -419,7 +414,9 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"loadGame", nullptr, LoadGame, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setSafeInsets", nullptr, SetSafeInsets, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sendTouchEvent", nullptr, SendTouchEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"sendKeyEvent", nullptr, SendKeyEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sendKeyEvent", nullptr, NapiPPSSPP::SendKeyEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sendAxisEvent", nullptr, NapiPPSSPP::SendAxisEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sendMultiAxisEvent", nullptr, NapiPPSSPP::SendMultiAxisEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"vibrate", nullptr, NapiPPSSPP::Vibrate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setVibrationCallback", nullptr, NapiPPSSPP::SetVibrationCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"checkVibrationConfig", nullptr, NapiPPSSPP::CheckVibrationConfig, nullptr, nullptr, nullptr, napi_default, nullptr},

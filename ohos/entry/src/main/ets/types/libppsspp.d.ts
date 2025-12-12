@@ -44,10 +44,29 @@ declare namespace ppsspp {
 
   /**
    * 发送按键事件
-   * @param keyCode 按键码
+   * @param keyCode 按键码（OHOS KeyCode）
    * @param isDown 是否按下
+   * @param isRepeat 是否是重复按键（可选）
+   * @param deviceId 设备 ID（可选，0=默认，1=键盘，10-19=手柄）
+   * @returns 是否消费了该按键
    */
-  function sendKeyEvent(keyCode: number, isDown: boolean): void;
+  function sendKeyEvent(keyCode: number, isDown: boolean, isRepeat?: boolean, deviceId?: number): boolean;
+
+  /**
+   * 发送单个手柄轴事件
+   * @param deviceId 设备 ID（0-9 对应手柄 0-9）
+   * @param axisId 轴 ID（0=X, 1=Y, 11=Z, 12=RX, 13=RY, 14=RZ, 15=HAT_X, 16=HAT_Y, 17=LTRIGGER, 18=RTRIGGER）
+   * @param value 轴值（-1.0 到 1.0）
+   */
+  function sendAxisEvent(deviceId: number, axisId: number, value: number): void;
+
+  /**
+   * 发送多个手柄轴事件（批量处理，更高效）
+   * @param deviceId 设备 ID
+   * @param axisIds 轴 ID 数组
+   * @param values 轴值数组
+   */
+  function sendMultiAxisEvent(deviceId: number, axisIds: number[], values: number[]): void;
 
   /**
    * 触发震动
