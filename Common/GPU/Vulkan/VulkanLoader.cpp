@@ -28,6 +28,33 @@
 #include "Common/StringUtils.h"
 #include "Common/System/System.h"
 #include "Common/VR/PPSSPPVR.h"
+
+#if PPSSPP_PLATFORM(OHOS)
+// 在 OHOS 上使用函数指针方式调用 HiLog，避免头文件冲突
+// 声明 OH_LOG_Print 函数，不包含头文件
+extern "C" {
+    typedef enum {
+        LOG_INFO = 0,
+        LOG_WARN = 1,
+        LOG_ERROR = 2,
+        LOG_FATAL = 3
+    } OhosLogLevel;
+    
+    typedef enum {
+        LOG_APP = 0
+    } OhosLogType;
+    
+    int OH_LOG_Print(OhosLogType type, OhosLogLevel level, unsigned int domain, const char *tag, const char *fmt, ...);
+}
+
+#define VK_OHOS_LOG(fmt, ...) OH_LOG_Print(LOG_APP, LOG_INFO, 0xA00001, "PPSSPP_Vulkan", fmt, ##__VA_ARGS__)
+#define VK_OHOS_WARN(fmt, ...) OH_LOG_Print(LOG_APP, LOG_WARN, 0xA00001, "PPSSPP_Vulkan", fmt, ##__VA_ARGS__)
+#define VK_OHOS_ERROR(fmt, ...) OH_LOG_Print(LOG_APP, LOG_ERROR, 0xA00001, "PPSSPP_Vulkan", fmt, ##__VA_ARGS__)
+#else
+#define VK_OHOS_LOG(fmt, ...)
+#define VK_OHOS_WARN(fmt, ...)
+#define VK_OHOS_ERROR(fmt, ...)
+#endif
 #include "Common/File/FileUtil.h"
 
 #if !PPSSPP_PLATFORM(WINDOWS) && !PPSSPP_PLATFORM(SWITCH)
@@ -345,10 +372,10 @@ static const char * const so_names[] = {
 	"@executable_path/../Frameworks/libMoltenVK.dylib",
 	"MoltenVK",
 #elif PPSSPP_PLATFORM(OHOS)
-	// OHOS Vulkan library paths
+	// HarmonyOS Vulkan library
+	// 只使用库名称，不使用绝对路径，避免命名空间隔离问题
+	// 系统会自动从允许的路径中查找
 	"libvulkan.so",
-	"/system/lib64/libvulkan.so",
-	"/system/lib/libvulkan.so",
 #else
 	"libvulkan.so",
 #if !defined(__ANDROID__) && !defined(OHOS) && !defined(__OHOS__)
@@ -465,15 +492,18 @@ bool VulkanMayBeAvailable() {
 	}
 
 	INFO_LOG(Log::G3D, "VulkanMayBeAvailable: Device allowed ('%s')", hwDeviceName.c_str());
+	VK_OHOS_LOG("VulkanMayBeAvailable: Device allowed ('%s')", hwDeviceName.c_str());
 
 	std::string errorStr;
 	VulkanLibraryHandle lib = VulkanLoadLibrary(&errorStr);
 	if (!lib) {
 		INFO_LOG(Log::G3D, "Vulkan loader: Library not available: %s", errorStr.c_str());
+		VK_OHOS_ERROR("Vulkan loader: Library not available: %s", errorStr.c_str());
 		g_vulkanAvailabilityChecked = true;
 		g_vulkanMayBeAvailable = false;
 		return false;
 	}
+	VK_OHOS_LOG("Vulkan library loaded successfully");
 
 	// Do a hyper minimal initialization and teardown to figure out if there's any chance
 	// that any sort of Vulkan will be usable.
@@ -500,7 +530,10 @@ bool VulkanMayBeAvailable() {
 
 #ifdef _WIN32
 	const char * const platformSurfaceExtension = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-#elif defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
+#elif defined(OHOS) || defined(__OHOS__)
+	// HarmonyOS uses VK_OHOS_surface instead of VK_KHR_android_surface
+	const char *platformSurfaceExtension = "VK_OHOS_surface";
+#elif defined(__ANDROID__)
 	const char *platformSurfaceExtension = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
 	const char * const platformSurfaceExtension = VK_EXT_METAL_SURFACE_EXTENSION_NAME;
@@ -510,6 +543,7 @@ bool VulkanMayBeAvailable() {
 
 	if (!localEnumerateInstanceExtensionProperties || !localCreateInstance || !localEnumerate || !localDestroyInstance || !localGetPhysicalDeviceProperties) {
 		WARN_LOG(Log::G3D, "VulkanMayBeAvailable: Function pointer missing, bailing");
+		VK_OHOS_ERROR("VulkanMayBeAvailable: Function pointer missing, bailing");
 		goto bail;
 	}
 
@@ -518,10 +552,12 @@ bool VulkanMayBeAvailable() {
 	// Maximum paranoia.
 	if (res != VK_SUCCESS) {
 		ERROR_LOG(Log::G3D, "Enumerating VK extensions failed (%s)", VulkanResultToString(res));
+		VK_OHOS_ERROR("Enumerating VK extensions failed (%s)", VulkanResultToString(res));
 		goto bail;
 	}
 	if (instanceExtCount == 0) {
 		ERROR_LOG(Log::G3D, "No VK instance extensions - won't be able to present.");
+		VK_OHOS_ERROR("No VK instance extensions - won't be able to present.");
 		goto bail;
 	}
 	INFO_LOG(Log::G3D, "VulkanMayBeAvailable: Instance extension count: %d", instanceExtCount);
@@ -546,11 +582,13 @@ bool VulkanMayBeAvailable() {
 	if (platformSurfaceExtension) {
 		if (!platformSurfaceExtensionFound || !surfaceExtensionFound) {
 			ERROR_LOG(Log::G3D, "Platform surface extension not found");
+			VK_OHOS_ERROR("Platform surface extension not found (need: %s)", platformSurfaceExtension);
 			goto bail;
 		}
 	} else {
 		if (!surfaceExtensionFound) {
 			ERROR_LOG(Log::G3D, "Surface extension not found");
+			VK_OHOS_ERROR("Surface extension not found");
 			goto bail;
 		}
 	}
@@ -571,13 +609,16 @@ bool VulkanMayBeAvailable() {
 	ci.pApplicationInfo = &info;
 	ci.flags = 0;
 	INFO_LOG(Log::G3D, "VulkanMayBeAvailable: Calling vkCreateInstance");
+	VK_OHOS_LOG("VulkanMayBeAvailable: Calling vkCreateInstance");
 	res = localCreateInstance(&ci, nullptr, &instance);
 	if (res != VK_SUCCESS) {
 		instance = nullptr;
 		ERROR_LOG(Log::G3D, "VulkanMayBeAvailable: Failed to create vulkan instance (%s)", VulkanResultToString(res));
+		VK_OHOS_ERROR("VulkanMayBeAvailable: Failed to create vulkan instance (%s)", VulkanResultToString(res));
 		goto bail;
 	}
 	INFO_LOG(Log::G3D, "VulkanMayBeAvailable: Vulkan test instance created successfully.");
+	VK_OHOS_LOG("VulkanMayBeAvailable: Vulkan test instance created successfully.");
 	res = localEnumerate(instance, &physicalDeviceCount, nullptr);
 	if (res != VK_SUCCESS) {
 		ERROR_LOG(Log::G3D, "VulkanMayBeAvailable: Failed to count physical devices (%s)", VulkanResultToString(res));
@@ -585,8 +626,10 @@ bool VulkanMayBeAvailable() {
 	}
 	if (physicalDeviceCount == 0) {
 		ERROR_LOG(Log::G3D, "VulkanMayBeAvailable: No physical Vulkan devices (count = 0).");
+		VK_OHOS_ERROR("VulkanMayBeAvailable: No physical Vulkan devices (count = 0).");
 		goto bail;
 	}
+	VK_OHOS_LOG("VulkanMayBeAvailable: Found %d physical device(s)", physicalDeviceCount);
 	devices.resize(physicalDeviceCount);
 	res = localEnumerate(instance, &physicalDeviceCount, devices.data());
 	if (res != VK_SUCCESS) {

@@ -12,6 +12,7 @@
 #include "../ohos_hilog.h"  // 使用自定义的 hilog 包装器
 #include "../ohos_xcomponent.h"
 #include "../ohos_system.h"
+#include "../ohos_app.h"  // for OhosApp::Initialize
 #include "../ohos_rawfile_reader.h"
 #include "napi_ppsspp.h"
 #include "Common/Log.h"
@@ -131,9 +132,23 @@ static bool InitializeXComponent(OH_NativeXComponent* component, const char* sou
         return false;
     }
     
+    // 根据配置选择图形后端
+    // 注意：此时 g_Config 可能还未加载，所以先使用 OpenGL
+    // 实际的后端切换会在用户更改设置后通过重启应用来实现
+    OhosXComponent::GraphicsBackend backend = OhosXComponent::GraphicsBackend::OPENGL;
+    
+    // 如果配置已加载，检查用户选择的后端
+    if (g_Config.iGPUBackend == (int)GPUBackend::VULKAN) {
+        OHOS_LOGI(NAPI_TAG, "User selected Vulkan backend");
+        backend = OhosXComponent::GraphicsBackend::VULKAN;
+    } else {
+        OHOS_LOGI(NAPI_TAG, "Using OpenGL backend (config: %{public}d)", g_Config.iGPUBackend);
+    }
+    
     // 初始化 XComponent
-    OHOS_LOGI(NAPI_TAG, "Initializing XComponent...");
-    bool success = OhosXComponent::Initialize(component);
+    OHOS_LOGI(NAPI_TAG, "Initializing XComponent with backend: %{public}s", 
+              backend == OhosXComponent::GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
+    bool success = OhosXComponent::Initialize(component, backend);
     if (success) {
         OHOS_LOGI(NAPI_TAG, "XComponent initialized successfully");
     } else {
@@ -244,6 +259,12 @@ static napi_value InitEmulator(napi_env env, napi_callback_info info) {
     
     g_nativeInitCalled = true;
     OHOS_LOGI(NAPI_TAG, "NativeInit completed");
+    
+    // 调用 OhosApp::Initialize() 进行额外的初始化（包括 Vulkan 检测）
+    OHOS_LOGI(NAPI_TAG, "Calling OhosApp::Initialize...");
+    bool appInitSuccess = OhosApp::Initialize();
+    OHOS_LOGI(NAPI_TAG, "OhosApp::Initialize %{public}s", appInitSuccess ? "succeeded" : "failed");
+    
     OHOS_LOGI(NAPI_TAG, "========== InitEmulator END ==========");
     
     napi_value result;
