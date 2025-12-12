@@ -87,6 +87,9 @@ std::string System_GetProperty(SystemProperty prop) {
         case SYSPROP_CAN_SHOW_FILE:
             return "1";
         
+        case SYSPROP_SUPPORTS_SHARE_TEXT:
+            return "1";
+        
         case SYSPROP_SUPPORTS_HTTPS:
             return "0";  // 暂时禁用 HTTPS
         
@@ -197,6 +200,8 @@ namespace NapiPPSSPP {
     bool ShowInputTextDialog(int requestId, const std::string& title, const std::string& defaultText);
     bool CopyToClipboard(const std::string& text);
     bool SetKeepScreenOn(bool keepOn);
+    bool ShareText(const std::string& text);
+    bool ShowFileInFolder(const std::string& path);
 }
 
 // 实现 System_MakeRequest 函数
@@ -241,6 +246,16 @@ bool System_MakeRequest(
             // param3 非零表示保持常亮
             INFO_LOG(Log::System, "System_MakeRequest: SET_KEEP_SCREEN_BRIGHT, keepOn=%d", (int)(param3 != 0));
             return NapiPPSSPP::SetKeepScreenOn(param3 != 0);
+        
+        case SystemRequestType::SHARE_TEXT:
+            // 分享文本
+            INFO_LOG(Log::System, "System_MakeRequest: SHARE_TEXT");
+            return NapiPPSSPP::ShareText(param1);
+        
+        case SystemRequestType::SHOW_FILE_IN_FOLDER:
+            // 显示文件位置
+            INFO_LOG(Log::System, "System_MakeRequest: SHOW_FILE_IN_FOLDER, path=%s", param1.c_str());
+            return NapiPPSSPP::ShowFileInFolder(param1);
         
         default:
             // 其他请求暂不实现

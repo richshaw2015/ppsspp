@@ -520,6 +520,91 @@ struct Index {
   }
 
   /**
+   * 设置分享文本回调函数
+   * 当 PPSSPP 需要分享文本时会调用此回调
+   */
+  private setupShareTextCallback(): void {
+    console.info('[PPSSPP] Setting up share text callback');
+    
+    try {
+      const success: boolean = ppsspp.setShareTextCallback((text: string): void => {
+        console.info('[PPSSPP] Sharing text');
+        
+        try {
+          // 使用 Want 分享文本
+          const want: Want = {
+            action: 'ohos.want.action.sendData',
+            type: 'text/plain',
+            parameters: {
+              'ability.params.stream': text
+            }
+          };
+          
+          this.context.startAbility(want).then(() => {
+            console.info('[PPSSPP] Share dialog opened successfully');
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to share text: ${err.message}`);
+          });
+        } catch (err) {
+          console.error(`[PPSSPP] Error sharing text: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Share text callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set share text callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting share text callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置显示文件位置回调函数
+   * 当 PPSSPP 需要在文件管理器中显示文件时会调用此回调
+   */
+  private setupShowFileInFolderCallback(): void {
+    console.info('[PPSSPP] Setting up show file in folder callback');
+    
+    try {
+      const success: boolean = ppsspp.setShowFileInFolderCallback((path: string): void => {
+        console.info(`[PPSSPP] Showing file in folder: ${path}`);
+        
+        try {
+          // 使用 Want 打开文件管理器
+          const want: Want = {
+            action: 'ohos.want.action.viewData',
+            uri: `file://${path}`,
+            type: 'resource/folder'
+          };
+          
+          this.context.startAbility(want).then(() => {
+            console.info('[PPSSPP] File manager opened successfully');
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to open file manager: ${err.message}`);
+            // 如果打开文件管理器失败，尝试显示 Toast 提示
+            promptAction.showToast({
+              message: `文件位置: ${path}`,
+              duration: 3000
+            });
+          });
+        } catch (err) {
+          console.error(`[PPSSPP] Error showing file in folder: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Show file in folder callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set show file in folder callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting show file in folder callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -627,6 +712,8 @@ struct Index {
           this.setupToastCallback();
           this.setupClipboardCallback();
           this.setupKeepScreenOnCallback();
+          this.setupShareTextCallback();
+          this.setupShowFileInFolderCallback();
         }, 500);
         
         this.isInitialized = true;

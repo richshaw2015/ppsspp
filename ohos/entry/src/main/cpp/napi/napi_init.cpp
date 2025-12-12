@@ -432,6 +432,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"setToastCallback", nullptr, NapiPPSSPP::SetToastCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setClipboardCallback", nullptr, NapiPPSSPP::SetClipboardCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setKeepScreenOnCallback", nullptr, NapiPPSSPP::SetKeepScreenOnCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setShareTextCallback", nullptr, NapiPPSSPP::SetShareTextCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setShowFileInFolderCallback", nullptr, NapiPPSSPP::SetShowFileInFolderCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     
     napi_status status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);

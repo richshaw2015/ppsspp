@@ -1427,4 +1427,202 @@ bool SetKeepScreenOn(bool keepOn) {
     return true;
 }
 
+// ============================================================================
+// 分享文本功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_shareTextTsFunc = nullptr;
+
+static void ShareTextCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShareTextCallJs: invalid env or callback");
+        if (data) delete static_cast<std::string*>(data);
+        return;
+    }
+    
+    std::string* text = static_cast<std::string*>(data);
+    if (text == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShareTextCallJs: text is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShareTextCallJs: sharing text");
+    
+    napi_value textArg;
+    napi_create_string_utf8(env, text->c_str(), text->length(), &textArg);
+    
+    napi_value result;
+    napi_value args[1] = { textArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete text;
+}
+
+napi_value SetShareTextCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetShareTextCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_shareTextTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_shareTextTsFunc, napi_tsfn_release);
+        g_shareTextTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ShareTextCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ShareTextCallJs, &g_shareTextTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetShareTextCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShareText callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ShareText(const std::string& text) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShareText called");
+    
+    if (g_shareTextTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShareText: callback not registered");
+        return false;
+    }
+    
+    std::string* textCopy = new std::string(text);
+    
+    napi_status status = napi_call_threadsafe_function(g_shareTextTsFunc, textCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShareText: failed to call threadsafe function");
+        delete textCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 显示文件位置功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_showFileInFolderTsFunc = nullptr;
+
+static void ShowFileInFolderCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowFileInFolderCallJs: invalid env or callback");
+        if (data) delete static_cast<std::string*>(data);
+        return;
+    }
+    
+    std::string* path = static_cast<std::string*>(data);
+    if (path == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowFileInFolderCallJs: path is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowFileInFolderCallJs: showing file: %{public}s", path->c_str());
+    
+    napi_value pathArg;
+    napi_create_string_utf8(env, path->c_str(), path->length(), &pathArg);
+    
+    napi_value result;
+    napi_value args[1] = { pathArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete path;
+}
+
+napi_value SetShowFileInFolderCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetShowFileInFolderCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_showFileInFolderTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_showFileInFolderTsFunc, napi_tsfn_release);
+        g_showFileInFolderTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ShowFileInFolderCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ShowFileInFolderCallJs, &g_showFileInFolderTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetShowFileInFolderCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowFileInFolder callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ShowFileInFolder(const std::string& path) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowFileInFolder called: %{public}s", path.c_str());
+    
+    if (g_showFileInFolderTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowFileInFolder: callback not registered");
+        return false;
+    }
+    
+    std::string* pathCopy = new std::string(path);
+    
+    napi_status status = napi_call_threadsafe_function(g_showFileInFolderTsFunc, pathCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowFileInFolder: failed to call threadsafe function");
+        delete pathCopy;
+        return false;
+    }
+    
+    return true;
+}
+
 } // namespace NapiPPSSPP

@@ -214,6 +214,30 @@ napi_value SetKeepScreenOnCallback(napi_env env, napi_callback_info info);
  */
 bool SetKeepScreenOn(bool keepOn);
 
+/**
+ * 设置分享文本回调函数
+ * 参数: callback (function(text: string): void)
+ */
+napi_value SetShareTextCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用分享文本
+ * @param text 要分享的文本
+ */
+bool ShareText(const std::string& text);
+
+/**
+ * 设置显示文件位置回调函数
+ * 参数: callback (function(path: string): void)
+ */
+napi_value SetShowFileInFolderCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用显示文件位置
+ * @param path 文件路径
+ */
+bool ShowFileInFolder(const std::string& path);
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H

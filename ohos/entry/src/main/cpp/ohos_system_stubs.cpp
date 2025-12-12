@@ -150,32 +150,16 @@ void SetVRAppMode(VRAppMode mode) {
 }
 
 // ============================================================================
-// ImGui 平台函数（ImGui 库已链接，只需平台层桩）
+// ImGui 平台函数
+// 注意：ImGui 平台层实现在 ext/imgui/imgui_impl_platform.cpp
+// 这里不需要重复实现，CMakeLists.txt 已经链接了该文件
 // ============================================================================
 
-// ImGui 平台初始化
-void ImGui_ImplPlatform_Init(const Path &fontPath) {
-    // ImGui 平台初始化 - 空实现
-    // TODO: 实现 ImGui 平台层
-    WARN_LOG(Log::System, "ImGui_ImplPlatform_Init: not implemented");
-}
-
-// ImGui 平台新帧
-void ImGui_ImplPlatform_NewFrame() {
-    // ImGui 平台新帧 - 空实现
-}
-
-// ImGui 平台按键事件
-bool ImGui_ImplPlatform_KeyEvent(const KeyInput &key) {
-    // ImGui 平台按键事件 - 空实现
-    return false;
-}
-
-// ImGui 平台触摸事件
-bool ImGui_ImplPlatform_TouchEvent(const TouchInput &touch) {
-    // ImGui 平台触摸事件 - 空实现
-    return false;
-}
+// 以下函数已在 ext/imgui/imgui_impl_platform.cpp 中实现：
+// - ImGui_ImplPlatform_Init
+// - ImGui_ImplPlatform_NewFrame
+// - ImGui_ImplPlatform_KeyEvent (通过 ImGui_ImplPlatform_KeyEvent)
+// - ImGui_ImplPlatform_TouchEvent (通过 ImGui_ImplPlatform_TouchEvent)
 
 // ============================================================================
 // CityHash 函数（用于哈希计算）

@@ -176,6 +176,20 @@ declare namespace ppsspp {
    * @param callback 回调函数，参数为是否保持屏幕常亮
    */
   function setKeepScreenOnCallback(callback: (keepOn: boolean) => void): boolean;
+
+  /**
+   * 设置分享文本回调函数
+   * 当 PPSSPP 需要分享文本时会调用此回调
+   * @param callback 回调函数，参数为要分享的文本
+   */
+  function setShareTextCallback(callback: (text: string) => void): boolean;
+
+  /**
+   * 设置显示文件位置回调函数
+   * 当 PPSSPP 需要在文件管理器中显示文件时会调用此回调
+   * @param callback 回调函数，参数为文件路径
+   */
+  function setShowFileInFolderCallback(callback: (path: string) => void): boolean;
 }
 
 export default ppsspp;

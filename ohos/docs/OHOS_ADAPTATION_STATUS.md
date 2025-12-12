@@ -34,6 +34,8 @@
 | Toast 提示 | `napi_ppsspp.cpp` | ✅ 完成 |
 | 剪贴板 | `napi_ppsspp.cpp` | ✅ 完成 |
 | 屏幕常亮 | `napi_ppsspp.cpp` | ✅ 完成 |
+| 分享文本 | `napi_ppsspp.cpp` | ✅ 完成 |
+| 显示文件位置 | `napi_ppsspp.cpp` | ✅ 完成 |
 
 ### ✅ 资源管理
 | 功能 | 文件 | 状态 |
@@ -125,25 +127,28 @@
 
 ### 🟢 低优先级（可选功能）
 
-#### 8. 分享功能 - `SHARE_TEXT`
-**当前状态**: 未实现
-**缺失功能**:
-- 分享文本到其他应用
+#### 8. ~~分享功能~~ - `SHARE_TEXT` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 分享文本到其他应用
 
-**实现建议**: 使用 OHOS `Want` 的 `ACTION_SEND`
+**实现方式**: 使用 OHOS `Want` 的 `ohos.want.action.sendData`
 
-#### 9. 显示文件位置 - `SHOW_FILE_IN_FOLDER`
-**当前状态**: 未实现
-**缺失功能**:
-- 在文件管理器中显示文件
+#### 9. ~~显示文件位置~~ - `SHOW_FILE_IN_FOLDER` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 在文件管理器中显示文件
+- ✅ 如果文件管理器不可用，显示 Toast 提示路径
+
+**实现方式**: 使用 OHOS `Want` 的 `ohos.want.action.viewData`
 
 #### 10. 摄像头/GPS/红外/麦克风命令
 **当前状态**: 未实现
 **说明**: 这些是 PSP 外设模拟功能，优先级较低
 
-#### 11. ImGui 平台层
-**当前状态**: 空实现
-**说明**: 用于调试界面，非必需
+#### 11. ~~ImGui 平台层~~ ✅ 已完成
+**当前状态**: 已完成
+**说明**: 使用 `ext/imgui/imgui_impl_platform.cpp` 中的通用实现，已在 CMakeLists.txt 中链接
 
 ---
 
@@ -188,10 +193,10 @@
 | `ohos_native_app_stubs.cpp` | NativeApp 桩 | 100% |
 | `ohos_rawfile_reader.cpp/h` | 资源读取 | 100% |
 | `ohos_system.cpp/h` | 系统管理 | 100% |
-| `ohos_system_properties.cpp` | 系统属性 | **98%** |
-| `ohos_system_stubs.cpp` | 系统函数桩 | **90%** |
+| `ohos_system_properties.cpp` | 系统属性 | **100%** |
+| `ohos_system_stubs.cpp` | 系统函数桩 | **95%** |
 | `ohos_vibration.cpp/h` | 震动功能 | 100% |
 | `ohos_vr_stubs.cpp` | VR 桩 | 100% |
 | `ohos_xcomponent.cpp/h` | XComponent | 100% |
 | `napi/napi_init.cpp` | NAPI 注册 | 100% |
-| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **98%** |
+| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **100%** |
