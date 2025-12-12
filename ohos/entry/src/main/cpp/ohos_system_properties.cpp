@@ -202,6 +202,8 @@ namespace NapiPPSSPP {
     bool SetKeepScreenOn(bool keepOn);
     bool ShareText(const std::string& text);
     bool ShowFileInFolder(const std::string& path);
+    bool RestartApp(const std::string& params);
+    bool ExitApp();
 }
 
 // 实现 System_MakeRequest 函数
@@ -256,6 +258,16 @@ bool System_MakeRequest(
             // 显示文件位置
             INFO_LOG(Log::System, "System_MakeRequest: SHOW_FILE_IN_FOLDER, path=%s", param1.c_str());
             return NapiPPSSPP::ShowFileInFolder(param1);
+        
+        case SystemRequestType::RESTART_APP:
+            // 重启应用（切换渲染引擎后需要）
+            INFO_LOG(Log::System, "System_MakeRequest: RESTART_APP, params=%s", param1.c_str());
+            return NapiPPSSPP::RestartApp(param1);
+        
+        case SystemRequestType::EXIT_APP:
+            // 退出应用
+            INFO_LOG(Log::System, "System_MakeRequest: EXIT_APP");
+            return NapiPPSSPP::ExitApp();
         
         default:
             // 其他请求暂不实现

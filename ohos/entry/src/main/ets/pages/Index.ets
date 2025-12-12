@@ -605,6 +605,84 @@ struct Index {
   }
 
   /**
+   * 设置重启应用回调函数
+   * 当 PPSSPP 需要重启应用（如切换渲染引擎）时会调用此回调
+   */
+  private setupRestartAppCallback(): void {
+    console.info('[PPSSPP] Setting up restart app callback');
+    
+    try {
+      const success: boolean = ppsspp.setRestartAppCallback((params: string): void => {
+        console.info(`[PPSSPP] Restart app requested with params: ${params}`);
+        
+        // 重启应用
+        // 在 OHOS 中，我们可以通过终止当前 Ability 并重新启动来实现重启
+        try {
+          // 先保存配置（PPSSPP 会在 System_RestartApp 之前调用 g_Config.Save）
+          // 然后重启
+          const want: Want = {
+            bundleName: this.context.abilityInfo.bundleName,
+            abilityName: this.context.abilityInfo.name,
+            parameters: {
+              restartParams: params
+            }
+          };
+          
+          this.context.startAbility(want).then(() => {
+            console.info('[PPSSPP] New instance started, terminating current');
+            // 启动新实例后终止当前实例
+            this.context.terminateSelf();
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to restart app: ${err.message}`);
+            promptAction.showToast({
+              message: '重启失败，请手动重启应用',
+              duration: 3000
+            });
+          });
+        } catch (err) {
+          console.error(`[PPSSPP] Error restarting app: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Restart app callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set restart app callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting restart app callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置退出应用回调函数
+   * 当 PPSSPP 需要退出应用时会调用此回调
+   */
+  private setupExitAppCallback(): void {
+    console.info('[PPSSPP] Setting up exit app callback');
+    
+    try {
+      const success: boolean = ppsspp.setExitAppCallback((): void => {
+        console.info('[PPSSPP] Exit app requested');
+        
+        try {
+          this.context.terminateSelf();
+        } catch (err) {
+          console.error(`[PPSSPP] Error exiting app: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Exit app callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set exit app callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting exit app callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -714,6 +792,8 @@ struct Index {
           this.setupKeepScreenOnCallback();
           this.setupShareTextCallback();
           this.setupShowFileInFolderCallback();
+          this.setupRestartAppCallback();
+          this.setupExitAppCallback();
         }, 500);
         
         this.isInitialized = true;

@@ -190,6 +190,20 @@ declare namespace ppsspp {
    * @param callback 回调函数，参数为文件路径
    */
   function setShowFileInFolderCallback(callback: (path: string) => void): boolean;
+
+  /**
+   * 设置重启应用回调函数
+   * 当 PPSSPP 需要重启应用（如切换渲染引擎）时会调用此回调
+   * @param callback 回调函数，参数为重启参数
+   */
+  function setRestartAppCallback(callback: (params: string) => void): boolean;
+
+  /**
+   * 设置退出应用回调函数
+   * 当 PPSSPP 需要退出应用时会调用此回调
+   * @param callback 回调函数
+   */
+  function setExitAppCallback(callback: () => void): boolean;
 }
 
 export default ppsspp;

@@ -1625,4 +1625,186 @@ bool ShowFileInFolder(const std::string& path) {
     return true;
 }
 
+// ============================================================================
+// 重启应用功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_restartAppTsFunc = nullptr;
+
+static void RestartAppCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RestartAppCallJs: invalid env or callback");
+        if (data) delete static_cast<std::string*>(data);
+        return;
+    }
+    
+    std::string* params = static_cast<std::string*>(data);
+    if (params == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RestartAppCallJs: params is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RestartAppCallJs: restarting app with params: %{public}s", params->c_str());
+    
+    napi_value paramsArg;
+    napi_create_string_utf8(env, params->c_str(), params->length(), &paramsArg);
+    
+    napi_value result;
+    napi_value args[1] = { paramsArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete params;
+}
+
+napi_value SetRestartAppCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetRestartAppCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_restartAppTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_restartAppTsFunc, napi_tsfn_release);
+        g_restartAppTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "RestartAppCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        RestartAppCallJs, &g_restartAppTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetRestartAppCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RestartApp callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool RestartApp(const std::string& params) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RestartApp called with params: %{public}s", params.c_str());
+    
+    if (g_restartAppTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RestartApp: callback not registered");
+        return false;
+    }
+    
+    std::string* paramsCopy = new std::string(params);
+    
+    napi_status status = napi_call_threadsafe_function(g_restartAppTsFunc, paramsCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RestartApp: failed to call threadsafe function");
+        delete paramsCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 退出应用功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_exitAppTsFunc = nullptr;
+
+static void ExitAppCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ExitAppCallJs: invalid env or callback");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ExitAppCallJs: exiting app");
+    
+    napi_value result;
+    napi_call_function(env, nullptr, js_callback, 0, nullptr, &result);
+}
+
+napi_value SetExitAppCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetExitAppCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_exitAppTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_exitAppTsFunc, napi_tsfn_release);
+        g_exitAppTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ExitAppCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ExitAppCallJs, &g_exitAppTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetExitAppCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ExitApp callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ExitApp() {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ExitApp called");
+    
+    if (g_exitAppTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ExitApp: callback not registered");
+        return false;
+    }
+    
+    napi_status status = napi_call_threadsafe_function(g_exitAppTsFunc, nullptr, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ExitApp: failed to call threadsafe function");
+        return false;
+    }
+    
+    return true;
+}
+
 } // namespace NapiPPSSPP

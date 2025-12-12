@@ -238,6 +238,29 @@ napi_value SetShowFileInFolderCallback(napi_env env, napi_callback_info info);
  */
 bool ShowFileInFolder(const std::string& path);
 
+/**
+ * 设置重启应用回调函数
+ * 参数: callback (function(params: string): void)
+ */
+napi_value SetRestartAppCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用重启应用
+ * @param params 重启参数
+ */
+bool RestartApp(const std::string& params);
+
+/**
+ * 设置退出应用回调函数
+ * 参数: callback (function(): void)
+ */
+napi_value SetExitAppCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用退出应用
+ */
+bool ExitApp();
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H
