@@ -106,17 +106,47 @@ void System_Vibrate(int length_ms) {
 // 权限系统函数
 // ============================================================================
 
+// OHOS 权限说明：
+// 1. OHOS 使用沙箱机制，应用可以自由访问自己的沙箱目录，不需要额外权限
+// 2. 文件选择器（DocumentViewPicker）会自动处理文件访问权限
+// 3. 需要在 module.json5 中声明的权限（如 INTERNET、VIBRATE）在安装时自动授予
+// 4. 因此，对于 PPSSPP 的主要用例，存储权限始终返回 GRANTED 是合理的
+//
+// 如果将来需要访问用户媒体文件，需要：
+// 1. 在 module.json5 中声明 ohos.permission.READ_MEDIA 等权限
+// 2. 使用 abilityAccessCtrl API 检查和请求权限
+
 PermissionStatus System_GetPermissionStatus(SystemPermission permission) {
-    // 鸿蒙权限系统 - 暂时返回已授权
-    // TODO: 实现真正的权限检查
-    INFO_LOG(Log::System, "System_GetPermissionStatus: %d (returning GRANTED)", (int)permission);
-    return PERMISSION_STATUS_GRANTED;
+    switch (permission) {
+        case SYSTEM_PERMISSION_STORAGE:
+            // OHOS 沙箱机制：应用沙箱内的文件不需要权限
+            // 文件选择器会自动处理外部文件的访问权限
+            INFO_LOG(Log::System, "System_GetPermissionStatus: STORAGE -> GRANTED (OHOS sandbox)");
+            return PERMISSION_STATUS_GRANTED;
+        
+        default:
+            INFO_LOG(Log::System, "System_GetPermissionStatus: %d -> GRANTED (default)", (int)permission);
+            return PERMISSION_STATUS_GRANTED;
+    }
 }
 
 void System_AskForPermission(SystemPermission permission) {
-    // 鸿蒙权限请求 - 空实现
-    // TODO: 实现权限请求对话框
-    INFO_LOG(Log::System, "System_AskForPermission: %d", (int)permission);
+    // OHOS 权限请求
+    // 由于 PPSSPP 使用的权限（存储、网络、震动）都是在安装时授予的，
+    // 或者通过文件选择器自动处理，因此这里不需要实际的权限请求对话框
+    
+    switch (permission) {
+        case SYSTEM_PERMISSION_STORAGE:
+            INFO_LOG(Log::System, "System_AskForPermission: STORAGE (no action needed on OHOS)");
+            // 在 OHOS 上，存储权限通过沙箱机制和文件选择器自动处理
+            // 直接发送权限已授予的消息
+            System_PostUIMessage(UIMessage::PERMISSION_GRANTED, "storage");
+            break;
+        
+        default:
+            INFO_LOG(Log::System, "System_AskForPermission: %d (no action)", (int)permission);
+            break;
+    }
 }
 
 // ============================================================================

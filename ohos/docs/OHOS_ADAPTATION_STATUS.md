@@ -113,15 +113,18 @@
 
 **实现方式**: 使用 OHOS `window.setWindowKeepScreenOn` API
 
-#### 7. 权限系统 - `System_GetPermissionStatus` / `System_AskForPermission`
-**当前状态**: 始终返回 GRANTED
-**缺失功能**:
-- 真正的权限检查
-- 权限请求对话框
+#### 7. ~~权限系统~~ - `System_GetPermissionStatus` / `System_AskForPermission` ✅ 已完成
+**当前状态**: 已完成（适配 OHOS 权限模型）
+**实现说明**:
+- OHOS 使用沙箱机制，应用可以自由访问自己的沙箱目录
+- 文件选择器（DocumentViewPicker）会自动处理文件访问权限
+- 需要在 module.json5 中声明的权限（INTERNET、VIBRATE）在安装时自动授予
+- 因此存储权限始终返回 GRANTED 是合理的
+- `System_AskForPermission` 会直接发送 `PERMISSION_GRANTED` 消息
 
-**影响**: 可能导致权限相关功能异常
-
-**实现建议**: 使用 OHOS `abilityAccessCtrl` API
+**与 Android 的区别**:
+- Android 需要运行时请求存储权限
+- OHOS 通过沙箱机制和文件选择器自动处理，不需要运行时权限请求
 
 ---
 
@@ -171,10 +174,10 @@
 4. ~~**屏幕常亮**~~ ✅ - 已完成
 5. ~~**Toast 提示**~~ ✅ - 已完成
 
-### 第三阶段（功能完善）
+### 第三阶段（功能完善）✅ 已完成
 6. ~~**剪贴板**~~ ✅ - 已完成
-7. **权限系统** - 规范化
-8. **分享功能** - 可选
+7. ~~**权限系统**~~ ✅ - 已完成（适配 OHOS 权限模型）
+8. ~~**分享功能**~~ ✅ - 已完成
 
 ---
 
