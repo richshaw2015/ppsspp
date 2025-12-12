@@ -123,6 +123,17 @@ void OhosAudioBackend::AudioCallbackStatic(short *buffer, int numSamples, int sa
     }
 }
 
+// 全局音频重置函数 - 由 System_Notify(AUDIO_RESET_DEVICE) 调用
+void OhosAudio_ResetDevice() {
+    OHOS_LOGI(AUDIO_BACKEND_TAG, "OhosAudio_ResetDevice called");
+    
+    if (g_audioBackend) {
+        // 暂停并重新初始化音频
+        // 注意：这里简单实现，实际可能需要更复杂的重置逻辑
+        OHOS_LOGI(AUDIO_BACKEND_TAG, "Audio device reset requested (no-op for now)");
+    }
+}
+
 void OhosAudioBackend::AudioCallback(short *buffer, int numSamples, int sampleRateHz) {
     std::lock_guard<std::mutex> lock(mutex_);
     

@@ -204,6 +204,7 @@ namespace NapiPPSSPP {
     bool ShowFileInFolder(const std::string& path);
     bool RestartApp(const std::string& params);
     bool ExitApp();
+    bool RecreateActivity();
 }
 
 // 实现 System_MakeRequest 函数
@@ -268,6 +269,11 @@ bool System_MakeRequest(
             // 退出应用
             INFO_LOG(Log::System, "System_MakeRequest: EXIT_APP");
             return NapiPPSSPP::ExitApp();
+        
+        case SystemRequestType::RECREATE_ACTIVITY:
+            // 重建 Activity（用于显示设置变更，如分辨率）
+            INFO_LOG(Log::System, "System_MakeRequest: RECREATE_ACTIVITY, params=%s", param1.c_str());
+            return NapiPPSSPP::RecreateActivity();
         
         default:
             // 其他请求暂不实现

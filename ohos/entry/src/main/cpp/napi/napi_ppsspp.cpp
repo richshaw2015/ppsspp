@@ -1807,4 +1807,353 @@ bool ExitApp() {
     return true;
 }
 
+// ============================================================================
+// 重建 Activity 功能 - 使用线程安全函数
+// 用于显示设置变更（如分辨率）
+// ============================================================================
+
+static napi_threadsafe_function g_recreateActivityTsFunc = nullptr;
+
+static void RecreateActivityCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RecreateActivityCallJs: invalid env or callback");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RecreateActivityCallJs: recreating activity");
+    
+    napi_value result;
+    napi_call_function(env, nullptr, js_callback, 0, nullptr, &result);
+}
+
+napi_value SetRecreateActivityCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetRecreateActivityCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_recreateActivityTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_recreateActivityTsFunc, napi_tsfn_release);
+        g_recreateActivityTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "RecreateActivityCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        RecreateActivityCallJs, &g_recreateActivityTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetRecreateActivityCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RecreateActivity callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool RecreateActivity() {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "RecreateActivity called");
+    
+    if (g_recreateActivityTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RecreateActivity: callback not registered");
+        return false;
+    }
+    
+    napi_status status = napi_call_threadsafe_function(g_recreateActivityTsFunc, nullptr, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "RecreateActivity: failed to call threadsafe function");
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 沉浸模式功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_immersiveModeTsFunc = nullptr;
+
+static void ImmersiveModeCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ImmersiveModeCallJs: invalid env or callback");
+        if (data) delete static_cast<bool*>(data);
+        return;
+    }
+    
+    bool* immersive = static_cast<bool*>(data);
+    if (immersive == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ImmersiveModeCallJs: immersive is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ImmersiveModeCallJs: setting immersive mode: %{public}d", *immersive);
+    
+    napi_value immersiveArg;
+    napi_get_boolean(env, *immersive, &immersiveArg);
+    
+    napi_value result;
+    napi_value args[1] = { immersiveArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete immersive;
+}
+
+napi_value SetImmersiveModeCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetImmersiveModeCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_immersiveModeTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_immersiveModeTsFunc, napi_tsfn_release);
+        g_immersiveModeTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ImmersiveModeCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ImmersiveModeCallJs, &g_immersiveModeTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetImmersiveModeCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ImmersiveMode callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool SetImmersiveMode(bool immersive) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetImmersiveMode called: %{public}d", immersive);
+    
+    if (g_immersiveModeTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetImmersiveMode: callback not registered");
+        return false;
+    }
+    
+    bool* immersiveCopy = new bool(immersive);
+    
+    napi_status status = napi_call_threadsafe_function(g_immersiveModeTsFunc, immersiveCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetImmersiveMode: failed to call threadsafe function");
+        delete immersiveCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 屏幕旋转功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_screenRotationTsFunc = nullptr;
+
+static void ScreenRotationCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ScreenRotationCallJs: invalid env or callback");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ScreenRotationCallJs: updating screen rotation");
+    
+    napi_value result;
+    napi_call_function(env, nullptr, js_callback, 0, nullptr, &result);
+}
+
+napi_value SetScreenRotationCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetScreenRotationCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_screenRotationTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_screenRotationTsFunc, napi_tsfn_release);
+        g_screenRotationTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ScreenRotationCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ScreenRotationCallJs, &g_screenRotationTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetScreenRotationCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ScreenRotation callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool UpdateScreenRotation() {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "UpdateScreenRotation called");
+    
+    if (g_screenRotationTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "UpdateScreenRotation: callback not registered");
+        return false;
+    }
+    
+    napi_status status = napi_call_threadsafe_function(g_screenRotationTsFunc, nullptr, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "UpdateScreenRotation: failed to call threadsafe function");
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 显示软键盘功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_showKeyboardTsFunc = nullptr;
+
+static void ShowKeyboardCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowKeyboardCallJs: invalid env or callback");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowKeyboardCallJs: showing keyboard");
+    
+    napi_value result;
+    napi_call_function(env, nullptr, js_callback, 0, nullptr, &result);
+}
+
+napi_value SetShowKeyboardCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetShowKeyboardCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_showKeyboardTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_showKeyboardTsFunc, napi_tsfn_release);
+        g_showKeyboardTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ShowKeyboardCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ShowKeyboardCallJs, &g_showKeyboardTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetShowKeyboardCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowKeyboard callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ShowKeyboard() {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowKeyboard called");
+    
+    if (g_showKeyboardTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowKeyboard: callback not registered");
+        return false;
+    }
+    
+    napi_status status = napi_call_threadsafe_function(g_showKeyboardTsFunc, nullptr, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowKeyboard: failed to call threadsafe function");
+        return false;
+    }
+    
+    return true;
+}
+
 } // namespace NapiPPSSPP

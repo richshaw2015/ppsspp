@@ -683,6 +683,158 @@ struct Index {
   }
 
   /**
+   * 设置重建 Activity 回调函数
+   * 当 PPSSPP 需要重建 Activity（如显示设置变更）时会调用此回调
+   */
+  private setupRecreateActivityCallback(): void {
+    console.info('[PPSSPP] Setting up recreate activity callback');
+    
+    try {
+      const success: boolean = ppsspp.setRecreateActivityCallback((): void => {
+        console.info('[PPSSPP] Recreate activity requested');
+        
+        // 在 OHOS 上，重建 Activity 可以通过重启应用实现
+        // 或者重新创建 XComponent
+        try {
+          const want: Want = {
+            bundleName: this.context.abilityInfo.bundleName,
+            abilityName: this.context.abilityInfo.name
+          };
+          
+          this.context.startAbility(want).then(() => {
+            console.info('[PPSSPP] New instance started for recreate');
+            this.context.terminateSelf();
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to recreate activity: ${err.message}`);
+          });
+        } catch (err) {
+          console.error(`[PPSSPP] Error recreating activity: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Recreate activity callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set recreate activity callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting recreate activity callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置沉浸模式回调函数
+   * 当 PPSSPP 需要设置沉浸模式时会调用此回调
+   */
+  private setupImmersiveModeCallback(): void {
+    console.info('[PPSSPP] Setting up immersive mode callback');
+    
+    try {
+      const success: boolean = ppsspp.setImmersiveModeCallback(async (immersive: boolean): Promise<void> => {
+        console.info(`[PPSSPP] Setting immersive mode: ${immersive}`);
+        
+        try {
+          const windowClass = await windowManager.getLastWindow(this.context);
+          
+          // 设置全屏模式
+          await windowClass.setWindowLayoutFullScreen(immersive);
+          
+          // 设置状态栏和导航栏可见性
+          if (immersive) {
+            await windowClass.setWindowSystemBarEnable([]);  // 隐藏所有系统栏
+          } else {
+            await windowClass.setWindowSystemBarEnable(['status', 'navigation']);  // 显示系统栏
+          }
+          
+          console.info(`[PPSSPP] Immersive mode set to: ${immersive}`);
+        } catch (err) {
+          console.error(`[PPSSPP] Failed to set immersive mode: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Immersive mode callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set immersive mode callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting immersive mode callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置屏幕旋转回调函数
+   * 当 PPSSPP 需要更新屏幕旋转时会调用此回调
+   */
+  private setupScreenRotationCallback(): void {
+    console.info('[PPSSPP] Setting up screen rotation callback');
+    
+    try {
+      const success: boolean = ppsspp.setScreenRotationCallback(async (): Promise<void> => {
+        console.info('[PPSSPP] Screen rotation update requested');
+        
+        try {
+          const windowClass = await windowManager.getLastWindow(this.context);
+          
+          // 获取当前窗口属性并更新安全区域
+          const cutoutAvoidArea = windowClass.getWindowAvoidArea(windowManager.AvoidAreaType.TYPE_CUTOUT);
+          
+          const MIN_CORNER_INSET = 40;
+          const cutoutLeft = cutoutAvoidArea.leftRect?.width || 0;
+          const cutoutTop = cutoutAvoidArea.topRect?.height || 0;
+          const cutoutRight = cutoutAvoidArea.rightRect?.width || 0;
+          const cutoutBottom = cutoutAvoidArea.bottomRect?.height || 0;
+          
+          const horizontalInset = Math.max(cutoutLeft, cutoutRight, MIN_CORNER_INSET);
+          const verticalInset = Math.max(cutoutTop, cutoutBottom, MIN_CORNER_INSET);
+          
+          ppsspp.setSafeInsets(horizontalInset, verticalInset, horizontalInset, verticalInset);
+          
+          console.info('[PPSSPP] Safe insets updated after rotation');
+        } catch (err) {
+          console.error(`[PPSSPP] Failed to update screen rotation: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Screen rotation callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set screen rotation callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting screen rotation callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置显示软键盘回调函数
+   * 当 PPSSPP 需要显示软键盘时会调用此回调
+   */
+  private setupShowKeyboardCallback(): void {
+    console.info('[PPSSPP] Setting up show keyboard callback');
+    
+    try {
+      const success: boolean = ppsspp.setShowKeyboardCallback((): void => {
+        console.info('[PPSSPP] Show keyboard requested');
+        
+        // 在 OHOS 上，软键盘通常由 TextInput 组件自动管理
+        // 这里可以通过 inputMethod 模块手动显示键盘
+        // 但由于 PPSSPP 使用自己的 UI 系统，这个功能可能不太适用
+        // 暂时只记录日志
+        console.info('[PPSSPP] Soft keyboard show requested (handled by system)');
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Show keyboard callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set show keyboard callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting show keyboard callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -794,6 +946,10 @@ struct Index {
           this.setupShowFileInFolderCallback();
           this.setupRestartAppCallback();
           this.setupExitAppCallback();
+          this.setupRecreateActivityCallback();
+          this.setupImmersiveModeCallback();
+          this.setupScreenRotationCallback();
+          this.setupShowKeyboardCallback();
         }, 500);
         
         this.isInitialized = true;

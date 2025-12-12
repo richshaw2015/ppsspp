@@ -51,9 +51,95 @@ int64_t System_GetPropertyInt(SystemProperty prop) {
 // System 通知函数
 // ============================================================================
 
+// 前向声明 - 在 napi_ppsspp.cpp 中实现
+namespace NapiPPSSPP {
+    bool RecreateActivity();
+    bool SetImmersiveMode(bool immersive);
+    bool UpdateScreenRotation();
+}
+
+// 前向声明 - 在 ohos_audio_backend.cpp 中实现
+void OhosAudio_ResetDevice();
+
 void System_Notify(SystemNotification notification) {
-    // 空实现 - 系统通知
-    INFO_LOG(Log::System, "System_Notify: %d", (int)notification);
+    switch (notification) {
+        case SystemNotification::ROTATE_UPDATED:
+            // 屏幕旋转更新
+            INFO_LOG(Log::System, "System_Notify: ROTATE_UPDATED");
+            NapiPPSSPP::UpdateScreenRotation();
+            break;
+        
+        case SystemNotification::FORCE_RECREATE_ACTIVITY:
+            // 强制重建 Activity（用于显示设置变更）
+            INFO_LOG(Log::System, "System_Notify: FORCE_RECREATE_ACTIVITY");
+            NapiPPSSPP::RecreateActivity();
+            break;
+        
+        case SystemNotification::IMMERSIVE_MODE_CHANGE:
+            // 沉浸模式变更
+            INFO_LOG(Log::System, "System_Notify: IMMERSIVE_MODE_CHANGE");
+            NapiPPSSPP::SetImmersiveMode(true);
+            break;
+        
+        case SystemNotification::AUDIO_RESET_DEVICE:
+            // 音频设备重置
+            INFO_LOG(Log::System, "System_Notify: AUDIO_RESET_DEVICE");
+            OhosAudio_ResetDevice();
+            break;
+        
+        case SystemNotification::AUDIO_MODE_CHANGED:
+            // 音频模式变更（静音模式、混音模式等）
+            INFO_LOG(Log::System, "System_Notify: AUDIO_MODE_CHANGED");
+            // OHOS 上音频模式由系统管理，不需要特殊处理
+            break;
+        
+        case SystemNotification::KEEP_SCREEN_AWAKE:
+            // 保持屏幕唤醒（游戏运行时）
+            // 注意：这个通知在每帧渲染时都会发送，不需要每次都调用 ArkTS
+            // 实际的屏幕常亮控制通过 SET_KEEP_SCREEN_BRIGHT 请求处理
+            break;
+        
+        case SystemNotification::ACTIVITY:
+            // 用户活动（触摸、按键等）- 用于屏幕保护程序
+            // OHOS 系统会自动处理，不需要特殊处理
+            break;
+        
+        case SystemNotification::UI_STATE_CHANGED:
+            // UI 状态变更
+            INFO_LOG(Log::System, "System_Notify: UI_STATE_CHANGED");
+            break;
+        
+        case SystemNotification::BOOT_DONE:
+            // 游戏启动完成
+            INFO_LOG(Log::System, "System_Notify: BOOT_DONE");
+            break;
+        
+        case SystemNotification::DEBUG_MODE_CHANGE:
+        case SystemNotification::DISASSEMBLY:
+        case SystemNotification::DISASSEMBLY_AFTERSTEP:
+        case SystemNotification::MEM_VIEW:
+        case SystemNotification::SYMBOL_MAP_UPDATED:
+            // 调试相关通知 - 在 OHOS 上不需要处理
+            break;
+        
+        default:
+            INFO_LOG(Log::System, "System_Notify: unhandled notification %d", (int)notification);
+            break;
+    }
+}
+
+// ============================================================================
+// System 键盘函数
+// ============================================================================
+
+// 前向声明 - 在 napi_ppsspp.cpp 中实现
+namespace NapiPPSSPP {
+    bool ShowKeyboard();
+}
+
+void System_ShowKeyboard() {
+    INFO_LOG(Log::System, "System_ShowKeyboard");
+    NapiPPSSPP::ShowKeyboard();
 }
 
 // ============================================================================
@@ -190,6 +276,27 @@ void SetVRAppMode(VRAppMode mode) {
 // - ImGui_ImplPlatform_NewFrame
 // - ImGui_ImplPlatform_KeyEvent (通过 ImGui_ImplPlatform_KeyEvent)
 // - ImGui_ImplPlatform_TouchEvent (通过 ImGui_ImplPlatform_TouchEvent)
+
+// ============================================================================
+// 摄像头和音频录制函数
+// ============================================================================
+
+std::vector<std::string> System_GetCameraDeviceList() {
+    // OHOS 摄像头设备列表 - 暂不实现
+    INFO_LOG(Log::System, "System_GetCameraDeviceList: returning empty list");
+    return std::vector<std::string>();
+}
+
+bool System_AudioRecordingIsAvailable() {
+    // OHOS 音频录制 - 暂不实现
+    INFO_LOG(Log::System, "System_AudioRecordingIsAvailable: returning false");
+    return false;
+}
+
+bool System_AudioRecordingState() {
+    // OHOS 音频录制状态 - 暂不实现
+    return false;
+}
 
 // ============================================================================
 // CityHash 函数（用于哈希计算）

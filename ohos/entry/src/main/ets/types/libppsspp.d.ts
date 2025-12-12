@@ -204,6 +204,34 @@ declare namespace ppsspp {
    * @param callback 回调函数
    */
   function setExitAppCallback(callback: () => void): boolean;
+
+  /**
+   * 设置重建 Activity 回调函数
+   * 当 PPSSPP 需要重建 Activity（如显示设置变更）时会调用此回调
+   * @param callback 回调函数
+   */
+  function setRecreateActivityCallback(callback: () => void): boolean;
+
+  /**
+   * 设置沉浸模式回调函数
+   * 当 PPSSPP 需要设置沉浸模式时会调用此回调
+   * @param callback 回调函数，参数为是否启用沉浸模式
+   */
+  function setImmersiveModeCallback(callback: (immersive: boolean) => void): boolean;
+
+  /**
+   * 设置屏幕旋转回调函数
+   * 当 PPSSPP 需要更新屏幕旋转时会调用此回调
+   * @param callback 回调函数
+   */
+  function setScreenRotationCallback(callback: () => void): boolean;
+
+  /**
+   * 设置显示软键盘回调函数
+   * 当 PPSSPP 需要显示软键盘时会调用此回调
+   * @param callback 回调函数
+   */
+  function setShowKeyboardCallback(callback: () => void): boolean;
 }
 
 export default ppsspp;

@@ -261,6 +261,52 @@ napi_value SetExitAppCallback(napi_env env, napi_callback_info info);
  */
 bool ExitApp();
 
+/**
+ * 设置重建 Activity 回调函数
+ * 参数: callback (function(): void)
+ */
+napi_value SetRecreateActivityCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用重建 Activity
+ * 用于显示设置变更（如分辨率）
+ */
+bool RecreateActivity();
+
+/**
+ * 设置沉浸模式回调函数
+ * 参数: callback (function(immersive: boolean): void)
+ */
+napi_value SetImmersiveModeCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用设置沉浸模式
+ * @param immersive 是否启用沉浸模式
+ */
+bool SetImmersiveMode(bool immersive);
+
+/**
+ * 设置屏幕旋转回调函数
+ * 参数: callback (function(): void)
+ */
+napi_value SetScreenRotationCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用更新屏幕旋转
+ */
+bool UpdateScreenRotation();
+
+/**
+ * 设置显示键盘回调函数
+ * 参数: callback (function(): void)
+ */
+napi_value SetShowKeyboardCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用显示软键盘
+ */
+bool ShowKeyboard();
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H

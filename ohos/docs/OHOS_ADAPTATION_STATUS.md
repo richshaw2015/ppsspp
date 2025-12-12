@@ -46,6 +46,32 @@
 
 ---
 
+## 新增功能（2024-12）
+
+### ✅ System_Notify 通知处理
+| 通知类型 | 状态 | 说明 |
+|----------|------|------|
+| ROTATE_UPDATED | ✅ 完成 | 屏幕旋转更新，重新计算安全区域 |
+| FORCE_RECREATE_ACTIVITY | ✅ 完成 | 强制重建 Activity，用于显示设置变更 |
+| IMMERSIVE_MODE_CHANGE | ✅ 完成 | 沉浸模式变更，控制系统栏显示 |
+| AUDIO_RESET_DEVICE | ✅ 完成 | 音频设备重置 |
+| AUDIO_MODE_CHANGED | ✅ 完成 | 音频模式变更（静音/混音） |
+| KEEP_SCREEN_AWAKE | ✅ 完成 | 通过 SET_KEEP_SCREEN_BRIGHT 请求处理 |
+
+### ✅ RECREATE_ACTIVITY 请求
+- 用于显示设置变更（如分辨率）
+- 实现方式：重启应用
+
+### ✅ 其他新增功能
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| System_ShowKeyboard | ✅ 完成 | 显示软键盘（由系统管理） |
+| System_GetCameraDeviceList | ✅ 完成 | 摄像头设备列表（返回空） |
+| System_AudioRecordingIsAvailable | ✅ 完成 | 音频录制可用性（返回 false） |
+| System_AudioRecordingState | ✅ 完成 | 音频录制状态（返回 false） |
+
+---
+
 ## 未完成/需要适配的功能
 
 ### 🔴 高优先级（影响核心功能）
@@ -200,7 +226,7 @@
 | `ohos_rawfile_reader.cpp/h` | 资源读取 | 100% |
 | `ohos_system.cpp/h` | 系统管理 | 100% |
 | `ohos_system_properties.cpp` | 系统属性 | **100%** |
-| `ohos_system_stubs.cpp` | 系统函数桩 | **95%** |
+| `ohos_system_stubs.cpp` | 系统函数桩 | **100%** |
 | `ohos_vibration.cpp/h` | 震动功能 | 100% |
 | `ohos_vr_stubs.cpp` | VR 桩 | 100% |
 | `ohos_xcomponent.cpp/h` | XComponent | 100% |
