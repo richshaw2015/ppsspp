@@ -178,6 +178,42 @@ bool ShowInputTextDialog(int requestId, const std::string& title, const std::str
  */
 napi_value OnInputTextCompleted(napi_env env, napi_callback_info info);
 
+/**
+ * 设置 Toast 回调函数
+ * 参数: callback (function(message: string): void)
+ */
+napi_value SetToastCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用显示 Toast
+ * @param message Toast 消息
+ */
+bool ShowToast(const std::string& message);
+
+/**
+ * 设置剪贴板回调函数
+ * 参数: callback (function(text: string): void)
+ */
+napi_value SetClipboardCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用复制到剪贴板
+ * @param text 要复制的文本
+ */
+bool CopyToClipboard(const std::string& text);
+
+/**
+ * 设置屏幕常亮回调函数
+ * 参数: callback (function(keepOn: boolean): void)
+ */
+napi_value SetKeepScreenOnCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用设置屏幕常亮
+ * @param keepOn 是否保持屏幕常亮
+ */
+bool SetKeepScreenOn(bool keepOn);
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H

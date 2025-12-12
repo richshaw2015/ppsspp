@@ -3,6 +3,7 @@ import ppsspp from 'libppsspp_ohos.so';
 import common from '@ohos.app.ability.common';
 import windowManager from '@ohos.window';
 import vibrator from '@ohos.vibrator';
+import pasteboard from '@ohos.pasteboard';
 import { promptAction } from '@kit.ArkUI';
 import { Want } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
@@ -423,6 +424,102 @@ struct Index {
   }
 
   /**
+   * 设置 Toast 回调函数
+   * 当 PPSSPP 需要显示 Toast 提示时会调用此回调
+   */
+  private setupToastCallback(): void {
+    console.info('[PPSSPP] Setting up toast callback');
+    
+    try {
+      const success: boolean = ppsspp.setToastCallback((message: string): void => {
+        console.info(`[PPSSPP] Toast: ${message}`);
+        
+        // 使用 promptAction.showToast 显示 Toast
+        promptAction.showToast({
+          message: message,
+          duration: 2000,  // 2 秒
+          bottom: 100      // 距离底部 100vp
+        });
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Toast callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set toast callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting toast callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置剪贴板回调函数
+   * 当 PPSSPP 需要复制文本到剪贴板时会调用此回调
+   */
+  private setupClipboardCallback(): void {
+    console.info('[PPSSPP] Setting up clipboard callback');
+    
+    try {
+      const success: boolean = ppsspp.setClipboardCallback((text: string): void => {
+        console.info('[PPSSPP] Copying to clipboard');
+        
+        try {
+          // 创建剪贴板数据
+          const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
+          
+          // 获取系统剪贴板并设置数据
+          const systemPasteboard = pasteboard.getSystemPasteboard();
+          systemPasteboard.setData(pasteData).then(() => {
+            console.info('[PPSSPP] Text copied to clipboard successfully');
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to copy to clipboard: ${err.message}`);
+          });
+        } catch (err) {
+          console.error(`[PPSSPP] Error copying to clipboard: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Clipboard callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set clipboard callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting clipboard callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置屏幕常亮回调函数
+   * 当 PPSSPP 需要设置屏幕常亮状态时会调用此回调
+   */
+  private setupKeepScreenOnCallback(): void {
+    console.info('[PPSSPP] Setting up keep screen on callback');
+    
+    try {
+      const success: boolean = ppsspp.setKeepScreenOnCallback(async (keepOn: boolean): Promise<void> => {
+        console.info(`[PPSSPP] Setting keep screen on: ${keepOn}`);
+        
+        try {
+          const windowClass = await windowManager.getLastWindow(this.context);
+          await windowClass.setWindowKeepScreenOn(keepOn);
+          console.info(`[PPSSPP] Keep screen on set to: ${keepOn}`);
+        } catch (err) {
+          console.error(`[PPSSPP] Failed to set keep screen on: ${(err as Error).message}`);
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Keep screen on callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set keep screen on callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting keep screen on callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -527,6 +624,9 @@ struct Index {
           this.setupBrowseFileCallback();
           this.setupBrowseFolderCallback();
           this.setupInputTextCallback();
+          this.setupToastCallback();
+          this.setupClipboardCallback();
+          this.setupKeepScreenOnCallback();
         }, 500);
         
         this.isInitialized = true;

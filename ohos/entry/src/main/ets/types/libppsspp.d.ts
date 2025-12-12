@@ -155,6 +155,27 @@ declare namespace ppsspp {
    * @param text 用户输入的文本
    */
   function onInputTextCompleted(requestId: number, success: boolean, text: string): boolean;
+
+  /**
+   * 设置 Toast 回调函数
+   * 当 PPSSPP 需要显示 Toast 提示时会调用此回调
+   * @param callback 回调函数，参数为消息文本
+   */
+  function setToastCallback(callback: (message: string) => void): boolean;
+
+  /**
+   * 设置剪贴板回调函数
+   * 当 PPSSPP 需要复制文本到剪贴板时会调用此回调
+   * @param callback 回调函数，参数为要复制的文本
+   */
+  function setClipboardCallback(callback: (text: string) => void): boolean;
+
+  /**
+   * 设置屏幕常亮回调函数
+   * 当 PPSSPP 需要设置屏幕常亮状态时会调用此回调
+   * @param callback 回调函数，参数为是否保持屏幕常亮
+   */
+  function setKeepScreenOnCallback(callback: (keepOn: boolean) => void): boolean;
 }
 
 export default ppsspp;

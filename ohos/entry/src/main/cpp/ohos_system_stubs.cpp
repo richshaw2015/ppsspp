@@ -84,10 +84,17 @@ std::vector<std::string> System_GetPropertyStringVec(SystemProperty prop) {
     return std::vector<std::string>();
 }
 
+// 前向声明 - 在 napi_ppsspp.cpp 中实现
+namespace NapiPPSSPP {
+    bool ShowToast(const std::string& message);
+}
+
 void System_Toast(std::string_view text) {
-    // 显示 Toast - 空实现
-    // TODO: 实现鸿蒙 Toast
     INFO_LOG(Log::System, "System_Toast: %.*s", (int)text.size(), text.data());
+    
+    // 调用 NAPI 层显示 Toast
+    std::string message(text);
+    NapiPPSSPP::ShowToast(message);
 }
 
 void System_Vibrate(int length_ms) {

@@ -31,6 +31,9 @@
 | 图片选择器 | `napi_ppsspp.cpp` | ✅ 完成 |
 | 文件选择器 | `napi_ppsspp.cpp` | ✅ 完成 |
 | 文件夹选择器 | `napi_ppsspp.cpp` | ✅ 完成 |
+| Toast 提示 | `napi_ppsspp.cpp` | ✅ 完成 |
+| 剪贴板 | `napi_ppsspp.cpp` | ✅ 完成 |
+| 屏幕常亮 | `napi_ppsspp.cpp` | ✅ 完成 |
 
 ### ✅ 资源管理
 | 功能 | 文件 | 状态 |
@@ -86,33 +89,27 @@
 
 ### 🟡 中优先级（影响用户体验）
 
-#### 4. 剪贴板功能 - `SYSPROP_CLIPBOARD_TEXT` / `COPY_TO_CLIPBOARD`
-**当前状态**: 返回空字符串
-**缺失功能**:
-- 读取剪贴板内容
-- 复制文本到剪贴板
+#### 4. ~~剪贴板功能~~ - `COPY_TO_CLIPBOARD` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 复制文本到剪贴板
 
-**影响**: 无法复制/粘贴金手指代码等
+**实现方式**: 使用 OHOS `pasteboard` API，通过 `napi_threadsafe_function` 实现线程安全回调
 
-**实现建议**: 使用 OHOS `pasteboard` API
+#### 5. ~~Toast 提示~~ - `System_Toast` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 显示 Toast 提示
 
-#### 5. Toast 提示 - `System_Toast`
-**当前状态**: 仅打印日志
-**缺失功能**:
-- 显示 Toast 提示
+**实现方式**: 使用 OHOS `promptAction.showToast` API
 
-**影响**: 用户无法看到操作反馈
+#### 6. ~~屏幕常亮~~ - `SET_KEEP_SCREEN_BRIGHT` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 游戏时保持屏幕常亮
+- ✅ 退出游戏时恢复正常
 
-**实现建议**: 通过 NAPI 回调 ArkTS 层的 `promptAction.showToast`
-
-#### 6. 屏幕常亮 - `SET_KEEP_SCREEN_BRIGHT`
-**当前状态**: 未实现
-**缺失功能**:
-- 游戏时保持屏幕常亮
-
-**影响**: 游戏时屏幕可能自动熄灭
-
-**实现建议**: 使用 OHOS `window.setWindowKeepScreenOn`
+**实现方式**: 使用 OHOS `window.setWindowKeepScreenOn` API
 
 #### 7. 权限系统 - `System_GetPermissionStatus` / `System_AskForPermission`
 **当前状态**: 始终返回 GRANTED
@@ -164,13 +161,13 @@
 1. ~~**输入系统**~~ ✅ - 已完成
 2. ~~**文件浏览器**~~ ✅ - 已完成
 
-### 第二阶段（完善体验）
+### 第二阶段（完善体验）✅ 已完成
 3. ~~**文本输入对话框**~~ ✅ - 已完成
-4. **屏幕常亮** - 游戏体验
-5. **Toast 提示** - 用户反馈
+4. ~~**屏幕常亮**~~ ✅ - 已完成
+5. ~~**Toast 提示**~~ ✅ - 已完成
 
 ### 第三阶段（功能完善）
-6. **剪贴板** - 金手指等
+6. ~~**剪贴板**~~ ✅ - 已完成
 7. **权限系统** - 规范化
 8. **分享功能** - 可选
 
@@ -191,10 +188,10 @@
 | `ohos_native_app_stubs.cpp` | NativeApp 桩 | 100% |
 | `ohos_rawfile_reader.cpp/h` | 资源读取 | 100% |
 | `ohos_system.cpp/h` | 系统管理 | 100% |
-| `ohos_system_properties.cpp` | 系统属性 | **95%** |
-| `ohos_system_stubs.cpp` | 系统函数桩 | **70%** |
+| `ohos_system_properties.cpp` | 系统属性 | **98%** |
+| `ohos_system_stubs.cpp` | 系统函数桩 | **90%** |
 | `ohos_vibration.cpp/h` | 震动功能 | 100% |
 | `ohos_vr_stubs.cpp` | VR 桩 | 100% |
 | `ohos_xcomponent.cpp/h` | XComponent | 100% |
 | `napi/napi_init.cpp` | NAPI 注册 | 100% |
-| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **95%** |
+| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **98%** |

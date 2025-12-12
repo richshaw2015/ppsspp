@@ -1130,4 +1130,301 @@ napi_value OnInputTextCompleted(napi_env env, napi_callback_info info) {
     return result;
 }
 
+// ============================================================================
+// Toast 功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_toastTsFunc = nullptr;
+
+static void ToastCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ToastCallJs: invalid env or callback");
+        if (data) delete static_cast<std::string*>(data);
+        return;
+    }
+    
+    std::string* message = static_cast<std::string*>(data);
+    if (message == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ToastCallJs: message is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ToastCallJs: showing toast: %{public}s", message->c_str());
+    
+    napi_value messageArg;
+    napi_create_string_utf8(env, message->c_str(), message->length(), &messageArg);
+    
+    napi_value result;
+    napi_value args[1] = { messageArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete message;
+}
+
+napi_value SetToastCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetToastCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_toastTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_toastTsFunc, napi_tsfn_release);
+        g_toastTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ToastCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ToastCallJs, &g_toastTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetToastCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "Toast callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ShowToast(const std::string& message) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowToast called: %{public}s", message.c_str());
+    
+    if (g_toastTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowToast: callback not registered");
+        return false;
+    }
+    
+    std::string* messageCopy = new std::string(message);
+    
+    napi_status status = napi_call_threadsafe_function(g_toastTsFunc, messageCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowToast: failed to call threadsafe function");
+        delete messageCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 剪贴板功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_clipboardTsFunc = nullptr;
+
+static void ClipboardCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ClipboardCallJs: invalid env or callback");
+        if (data) delete static_cast<std::string*>(data);
+        return;
+    }
+    
+    std::string* text = static_cast<std::string*>(data);
+    if (text == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ClipboardCallJs: text is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ClipboardCallJs: copying to clipboard");
+    
+    napi_value textArg;
+    napi_create_string_utf8(env, text->c_str(), text->length(), &textArg);
+    
+    napi_value result;
+    napi_value args[1] = { textArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete text;
+}
+
+napi_value SetClipboardCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetClipboardCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_clipboardTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_clipboardTsFunc, napi_tsfn_release);
+        g_clipboardTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "ClipboardCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        ClipboardCallJs, &g_clipboardTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetClipboardCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "Clipboard callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool CopyToClipboard(const std::string& text) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "CopyToClipboard called");
+    
+    if (g_clipboardTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "CopyToClipboard: callback not registered");
+        return false;
+    }
+    
+    std::string* textCopy = new std::string(text);
+    
+    napi_status status = napi_call_threadsafe_function(g_clipboardTsFunc, textCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "CopyToClipboard: failed to call threadsafe function");
+        delete textCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+// ============================================================================
+// 屏幕常亮功能 - 使用线程安全函数
+// ============================================================================
+
+static napi_threadsafe_function g_keepScreenOnTsFunc = nullptr;
+
+static void KeepScreenOnCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "KeepScreenOnCallJs: invalid env or callback");
+        if (data) delete static_cast<bool*>(data);
+        return;
+    }
+    
+    bool* keepOn = static_cast<bool*>(data);
+    if (keepOn == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "KeepScreenOnCallJs: keepOn is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "KeepScreenOnCallJs: setting keep screen on: %{public}d", *keepOn);
+    
+    napi_value keepOnArg;
+    napi_get_boolean(env, *keepOn, &keepOnArg);
+    
+    napi_value result;
+    napi_value args[1] = { keepOnArg };
+    napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    
+    delete keepOn;
+}
+
+napi_value SetKeepScreenOnCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetKeepScreenOnCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_keepScreenOnTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_keepScreenOnTsFunc, napi_tsfn_release);
+        g_keepScreenOnTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "KeepScreenOnCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        KeepScreenOnCallJs, &g_keepScreenOnTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetKeepScreenOnCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "KeepScreenOn callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool SetKeepScreenOn(bool keepOn) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetKeepScreenOn called: %{public}d", keepOn);
+    
+    if (g_keepScreenOnTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetKeepScreenOn: callback not registered");
+        return false;
+    }
+    
+    bool* keepOnCopy = new bool(keepOn);
+    
+    napi_status status = napi_call_threadsafe_function(g_keepScreenOnTsFunc, keepOnCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetKeepScreenOn: failed to call threadsafe function");
+        delete keepOnCopy;
+        return false;
+    }
+    
+    return true;
+}
+
 } // namespace NapiPPSSPP

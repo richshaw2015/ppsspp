@@ -195,6 +195,8 @@ namespace NapiPPSSPP {
     bool BrowseForFile(int requestId, int fileType);
     bool BrowseForFolder(int requestId);
     bool ShowInputTextDialog(int requestId, const std::string& title, const std::string& defaultText);
+    bool CopyToClipboard(const std::string& text);
+    bool SetKeepScreenOn(bool keepOn);
 }
 
 // 实现 System_MakeRequest 函数
@@ -228,6 +230,17 @@ bool System_MakeRequest(
             // param1 = 标题, param2 = 默认文本
             INFO_LOG(Log::System, "System_MakeRequest: INPUT_TEXT_MODAL, requestId=%d, title=%s", requestId, param1.c_str());
             return NapiPPSSPP::ShowInputTextDialog(requestId, param1, param2);
+        
+        case SystemRequestType::COPY_TO_CLIPBOARD:
+            // 复制文本到剪贴板
+            INFO_LOG(Log::System, "System_MakeRequest: COPY_TO_CLIPBOARD");
+            return NapiPPSSPP::CopyToClipboard(param1);
+        
+        case SystemRequestType::SET_KEEP_SCREEN_BRIGHT:
+            // 设置屏幕常亮
+            // param3 非零表示保持常亮
+            INFO_LOG(Log::System, "System_MakeRequest: SET_KEEP_SCREEN_BRIGHT, keepOn=%d", (int)(param3 != 0));
+            return NapiPPSSPP::SetKeepScreenOn(param3 != 0);
         
         default:
             // 其他请求暂不实现
