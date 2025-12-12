@@ -5,6 +5,9 @@ project(ppsspp_ohos)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Vulkan 支持选项
+option(USE_VULKAN "Enable Vulkan rendering backend" ON)
+
 # 定义编译宏
 add_definitions(
     -DOHOS=1
@@ -15,6 +18,13 @@ add_definitions(
     -DGLEW_NO_GLU
     -DHTTPS_NOT_AVAILABLE
 )
+
+# Vulkan 相关宏定义
+if(USE_VULKAN)
+    add_definitions(
+        -DVK_USE_PLATFORM_ANDROID_KHR
+    )
+endif()
 
 # 设置根目录
 # 从 ohos/entry/src/main/cpp 到项目根目录需要 5 个 ../
@@ -56,6 +66,13 @@ set(OHOS_SOURCES
     # ohos_native_app_stubs.cpp  # 不再需要，使用真正的 UI 库
 )
 
+# Vulkan 源文件
+if(USE_VULKAN)
+    list(APPEND OHOS_SOURCES
+        ohos_vulkan_context.cpp
+    )
+endif()
+
 # 创建共享库
 add_library(ppsspp_ohos SHARED
     ${NAPI_SOURCES}
@@ -84,6 +101,11 @@ target_link_libraries(ppsspp_ohos
     rawfile.z
     ohaudio
 )
+
+# Vulkan 库链接
+if(USE_VULKAN)
+    target_link_libraries(ppsspp_ohos PUBLIC vulkan)
+endif()
 
 # ============================================================================
 # 阶段 2.1: 最小依赖集成

@@ -14,8 +14,10 @@
 | 功能 | 文件 | 状态 |
 |------|------|------|
 | OpenGL ES 上下文 | `ohos_gl_context.cpp` | ✅ 完成 |
+| Vulkan 上下文 | `ohos_vulkan_context.cpp` | ✅ 完成 |
 | XComponent 集成 | `ohos_xcomponent.cpp` | ✅ 完成 |
 | 渲染循环 | `ohos_xcomponent.cpp` | ✅ 完成 |
+| 多后端支持 | `ohos_xcomponent.cpp` | ✅ 完成（OpenGL/Vulkan）|
 
 ### ✅ 音频系统
 | 功能 | 文件 | 状态 |
@@ -190,6 +192,7 @@
 | `ohos_audio_backend.cpp/h` | 音频后端接口 | 100% |
 | `ohos_content_uri.cpp` | URI 处理（空桩） | 100% |
 | `ohos_gl_context.cpp/h` | OpenGL 上下文 | 100% |
+| `ohos_vulkan_context.cpp/h` | Vulkan 上下文 | **100%** |
 | `ohos_graphics_context.h` | 图形上下文接口 | 100% |
 | `ohos_hilog.h` | 日志封装 | 100% |
 | `ohos_input.cpp/h` | 输入系统 | **100%** |

@@ -74,6 +74,12 @@ public:
      */
     virtual GraphicsContextState GetState() const = 0;
     
+    /**
+     * 获取 Draw 上下文
+     * 子类必须实现此方法
+     */
+    Draw::DrawContext* GetDrawContext() override = 0;
+    
     // 实现 GraphicsContext 接口
     void Resize() override {}
     void Shutdown() override = 0;

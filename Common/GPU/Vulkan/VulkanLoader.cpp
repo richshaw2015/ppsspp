@@ -189,7 +189,7 @@ PFN_vkCmdCopyQueryPoolResults vkCmdCopyQueryPoolResults;
 PFN_vkCmdNextSubpass vkCmdNextSubpass;
 PFN_vkCmdExecuteCommands vkCmdExecuteCommands;
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 PFN_vkCreateAndroidSurfaceKHR vkCreateAndroidSurfaceKHR;
 #elif defined(_WIN32)
 PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
@@ -346,7 +346,7 @@ static const char * const so_names[] = {
 	"MoltenVK",
 #else
 	"libvulkan.so",
-#if !defined(__ANDROID__)
+#if !defined(__ANDROID__) && !defined(OHOS) && !defined(__OHOS__)
 	"libvulkan.so.1",
 #endif
 #endif
@@ -495,7 +495,7 @@ bool VulkanMayBeAvailable() {
 
 #ifdef _WIN32
 	const char * const platformSurfaceExtension = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 	const char *platformSurfaceExtension = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
 	const char * const platformSurfaceExtension = VK_EXT_METAL_SURFACE_EXTENSION_NAME;
@@ -718,7 +718,7 @@ void VulkanLoadInstanceFunctions(VkInstance instance, const VulkanExtensions &en
 
 #ifdef _WIN32
 	LOAD_INSTANCE_FUNC(instance, vkCreateWin32SurfaceKHR);
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 	LOAD_INSTANCE_FUNC(instance, vkCreateAndroidSurfaceKHR);
 #elif defined(VK_USE_PLATFORM_METAL_EXT)
 	LOAD_INSTANCE_FUNC(instance, vkCreateMetalSurfaceEXT);

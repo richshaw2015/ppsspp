@@ -143,7 +143,7 @@ VkResult VulkanContext::CreateInstance(const CreateInfo &info) {
 	instance_extensions_enabled_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
 	instance_extensions_enabled_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 	instance_extensions_enabled_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
@@ -980,9 +980,10 @@ VkResult VulkanContext::ReinitSurface() {
 		break;
 	}
 #endif
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 	case WINDOWSYSTEM_ANDROID:
 	{
+		// Works for both Android and OHOS - both use ANativeWindow
 		ANativeWindow *wnd = (ANativeWindow *)winsysData1_;
 		VkAndroidSurfaceCreateInfoKHR android{ VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR };
 		android.flags = 0;

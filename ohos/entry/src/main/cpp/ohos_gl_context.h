@@ -29,12 +29,12 @@ public:
     std::string GetAPIType() const override { return "OpenGL ES"; }
     
     // GraphicsContext 接口
-    bool InitFromRenderThread(void* window, int desiredWidth, int desiredHeight);
-    void ShutdownFromRenderThread();
+    bool InitFromRenderThread(void* window, int desiredWidth, int desiredHeight) override;
+    void ShutdownFromRenderThread() override;
     void ThreadStart();
     bool ThreadFrame(bool waitIfEmpty);
     void ThreadEnd();
-    Draw::DrawContext* GetDrawContext() { return draw_; }
+    Draw::DrawContext* GetDrawContext() override { return draw_; }
     
     // 鸿蒙特定接口
     void SetNativeWindow(void* window);

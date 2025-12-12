@@ -10,13 +10,25 @@
 #include <string>
 
 class OhosGLContext;
+class OhosVulkanContext;
+class OhosGraphicsContext;
 
 namespace OhosXComponent {
 
 /**
- * 初始化 XComponent
+ * 图形后端类型
  */
-bool Initialize(OH_NativeXComponent* component);
+enum class GraphicsBackend {
+    OPENGL,
+    VULKAN
+};
+
+/**
+ * 初始化 XComponent
+ * @param component XComponent 组件
+ * @param backend 图形后端类型（默认 OpenGL）
+ */
+bool Initialize(OH_NativeXComponent* component, GraphicsBackend backend = GraphicsBackend::OPENGL);
 
 /**
  * 关闭 XComponent
@@ -24,9 +36,24 @@ bool Initialize(OH_NativeXComponent* component);
 void Shutdown();
 
 /**
- * 获取 GL 上下文
+ * 获取当前图形后端类型
+ */
+GraphicsBackend GetCurrentBackend();
+
+/**
+ * 获取图形上下文（通用接口）
+ */
+OhosGraphicsContext* GetGraphicsContext();
+
+/**
+ * 获取 GL 上下文（兼容旧代码）
  */
 OhosGLContext* GetGLContext();
+
+/**
+ * 获取 Vulkan 上下文
+ */
+OhosVulkanContext* GetVulkanContext();
 
 /**
  * XComponent 回调：表面创建

@@ -19,7 +19,7 @@
 
 #include "ppsspp_config.h"
 
-#if PPSSPP_PLATFORM(ANDROID)
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS)
 #define VK_USE_PLATFORM_ANDROID_KHR
 #elif defined(_WIN32)
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -191,7 +191,7 @@ extern PFN_vkCmdNextSubpass vkCmdNextSubpass;
 extern PFN_vkCmdEndRenderPass vkCmdEndRenderPass;
 extern PFN_vkCmdExecuteCommands vkCmdExecuteCommands;
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 extern PFN_vkCreateAndroidSurfaceKHR vkCreateAndroidSurfaceKHR;
 #elif defined(_WIN32)
 extern PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;

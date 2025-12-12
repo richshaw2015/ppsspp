@@ -56,7 +56,7 @@ enum WindowSystem {
 #ifdef _WIN32
 	WINDOWSYSTEM_WIN32,
 #endif
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
 	WINDOWSYSTEM_ANDROID,
 #endif
 #ifdef VK_USE_PLATFORM_METAL_EXT

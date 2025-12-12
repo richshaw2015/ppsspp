@@ -5,6 +5,7 @@
 
 #include "ohos_xcomponent.h"
 #include "ohos_gl_context.h"
+#include "ohos_vulkan_context.h"
 #include "ohos_hilog.h"  // 使用自定义的 hilog 包装器，避免 LogLevel 冲突
 #include "ohos_vibration.h"
 #include "Common/Log.h"
@@ -25,7 +26,9 @@
 
 namespace OhosXComponent {
 
+static GraphicsBackend g_currentBackend = GraphicsBackend::OPENGL;
 static OhosGLContext* g_glContext = nullptr;
+static OhosVulkanContext* g_vulkanContext = nullptr;
 static OH_NativeXComponent* g_component = nullptr;
 static void* g_nativeWindow = nullptr;
 static std::thread g_renderThread;
@@ -59,7 +62,7 @@ static void DispatchTouchEventCB(OH_NativeXComponent* component, void* window) {
     OnTouchEvent(component, window);
 }
 
-bool Initialize(OH_NativeXComponent* component) {
+bool Initialize(OH_NativeXComponent* component, GraphicsBackend backend) {
     if (!component) {
         ERROR_LOG(Log::G3D, "XComponent is null");
         return false;
@@ -71,8 +74,10 @@ bool Initialize(OH_NativeXComponent* component) {
         return true;
     }
     
-    INFO_LOG(Log::G3D, "Initializing XComponent");
+    INFO_LOG(Log::G3D, "Initializing XComponent with backend: %s", 
+             backend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
     g_component = component;
+    g_currentBackend = backend;
     
     // 注册回调 - 注意：回调已经在 napi_init.cpp 中注册了，这里不需要重复注册
     // OH_NativeXComponent_Callback callback;
@@ -82,12 +87,31 @@ bool Initialize(OH_NativeXComponent* component) {
     // callback.DispatchTouchEvent = DispatchTouchEventCB;
     // OH_NativeXComponent_RegisterCallback(component, &callback);
     
-    // 创建 GL 上下文（只创建一次）
-    if (!g_glContext) {
-        g_glContext = new OhosGLContext();
+    // 根据后端类型创建图形上下文
+    if (backend == GraphicsBackend::VULKAN) {
+        if (!g_vulkanContext) {
+            g_vulkanContext = new OhosVulkanContext();
+            // 初始化 Vulkan API（在主线程）
+            if (!g_vulkanContext->InitAPI()) {
+                ERROR_LOG(Log::G3D, "Failed to initialize Vulkan API, falling back to OpenGL");
+                delete g_vulkanContext;
+                g_vulkanContext = nullptr;
+                g_currentBackend = GraphicsBackend::OPENGL;
+                // 回退到 OpenGL
+                if (!g_glContext) {
+                    g_glContext = new OhosGLContext();
+                }
+            }
+        }
+    } else {
+        // 创建 GL 上下文（只创建一次）
+        if (!g_glContext) {
+            g_glContext = new OhosGLContext();
+        }
     }
     
-    INFO_LOG(Log::G3D, "XComponent initialized");
+    INFO_LOG(Log::G3D, "XComponent initialized with %s backend", 
+             g_currentBackend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
     return true;
 }
 
@@ -102,12 +126,33 @@ void Shutdown() {
         g_glContext = nullptr;
     }
     
+    if (g_vulkanContext) {
+        g_vulkanContext->Shutdown();
+        delete g_vulkanContext;
+        g_vulkanContext = nullptr;
+    }
+    
     g_component = nullptr;
     g_nativeWindow = nullptr;
 }
 
+GraphicsBackend GetCurrentBackend() {
+    return g_currentBackend;
+}
+
+OhosGraphicsContext* GetGraphicsContext() {
+    if (g_currentBackend == GraphicsBackend::VULKAN && g_vulkanContext) {
+        return g_vulkanContext;
+    }
+    return g_glContext;
+}
+
 OhosGLContext* GetGLContext() {
     return g_glContext;
+}
+
+OhosVulkanContext* GetVulkanContext() {
+    return g_vulkanContext;
 }
 
 void OnSurfaceCreated(OH_NativeXComponent* component, void* window) {
@@ -129,15 +174,23 @@ void OnSurfaceCreated(OH_NativeXComponent* component, void* window) {
     std::lock_guard<std::mutex> lock(g_surfaceMutex);
     g_nativeWindow = window;
     
-    OHOS_LOGI(XCOMP_TAG, "g_glContext=%{public}p", g_glContext);
+    OHOS_LOGI(XCOMP_TAG, "Backend: %{public}s, g_glContext=%{public}p, g_vulkanContext=%{public}p", 
+              g_currentBackend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL",
+              g_glContext, g_vulkanContext);
     
-    if (g_glContext) {
-        g_glContext->SetNativeWindow(window);
-        OHOS_LOGI(XCOMP_TAG, "SetNativeWindow done");
+    // 根据后端类型设置 native window
+    if (g_currentBackend == GraphicsBackend::VULKAN) {
+        // Vulkan 不需要在这里设置 window，会在 InitFromRenderThread 中处理
+        OHOS_LOGI(XCOMP_TAG, "Vulkan backend - window will be set in render thread");
     } else {
-        OHOS_LOGE(XCOMP_TAG, "g_glContext is NULL! Creating new one...");
-        g_glContext = new OhosGLContext();
-        g_glContext->SetNativeWindow(window);
+        if (g_glContext) {
+            g_glContext->SetNativeWindow(window);
+            OHOS_LOGI(XCOMP_TAG, "SetNativeWindow done");
+        } else {
+            OHOS_LOGE(XCOMP_TAG, "g_glContext is NULL! Creating new one...");
+            g_glContext = new OhosGLContext();
+            g_glContext->SetNativeWindow(window);
+        }
     }
     
     // 获取表面尺寸
@@ -310,8 +363,9 @@ void RenderLoop() {
     }
     
     // 检查前置条件
-    if (!g_glContext) {
-        OHOS_LOGE(XCOMP_TAG, "Cannot start render loop: g_glContext is NULL");
+    OhosGraphicsContext* graphicsContext = GetGraphicsContext();
+    if (!graphicsContext) {
+        OHOS_LOGE(XCOMP_TAG, "Cannot start render loop: no graphics context");
         return;
     }
     if (!g_nativeWindow) {
@@ -323,50 +377,59 @@ void RenderLoop() {
         return;
     }
     
-    OHOS_LOGI(XCOMP_TAG, "=== Starting Render Loop ===");
-    OHOS_LOGI(XCOMP_TAG, "g_glContext=%{public}p, g_nativeWindow=%{public}p, size=%{public}dx%{public}d", 
-              g_glContext, g_nativeWindow, g_surfaceWidth, g_surfaceHeight);
-    INFO_LOG(Log::G3D, "Starting render loop");
+    OHOS_LOGI(XCOMP_TAG, "=== Starting Render Loop (%{public}s) ===", 
+              g_currentBackend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
+    OHOS_LOGI(XCOMP_TAG, "graphicsContext=%{public}p, g_nativeWindow=%{public}p, size=%{public}dx%{public}d", 
+              graphicsContext, g_nativeWindow, g_surfaceWidth, g_surfaceHeight);
+    INFO_LOG(Log::G3D, "Starting render loop with %s backend", 
+             g_currentBackend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
     g_exitRenderLoop.store(false);
     
     // 分离线程，避免阻塞主线程
     g_renderThread = std::thread([]() {
         OHOS_LOGI(XCOMP_TAG, "=== Render Thread Started ===");
-        OHOS_LOGI(XCOMP_TAG, "Surface: %{public}dx%{public}d", g_surfaceWidth, g_surfaceHeight);
+        OHOS_LOGI(XCOMP_TAG, "Surface: %{public}dx%{public}d, Backend: %{public}s", 
+                  g_surfaceWidth, g_surfaceHeight,
+                  g_currentBackend == GraphicsBackend::VULKAN ? "Vulkan" : "OpenGL");
         
         INFO_LOG(Log::G3D, "Render thread started");
         g_renderLoopRunning.store(true);
         
+        OhosGraphicsContext* ctx = GetGraphicsContext();
+        
         // 再次检查（线程启动后可能状态已变）
-        if (!g_glContext || !g_nativeWindow) {
+        if (!ctx || !g_nativeWindow) {
             OHOS_LOGE(XCOMP_TAG, "Render thread: context or window became null!");
             g_renderLoopRunning.store(false);
             return;
         }
         
         // 初始化图形上下文
-        OHOS_LOGI(XCOMP_TAG, "Initializing GL context from render thread...");
-        if (!g_glContext->InitFromRenderThread(g_nativeWindow, g_surfaceWidth, g_surfaceHeight)) {
+        OHOS_LOGI(XCOMP_TAG, "Initializing graphics context from render thread...");
+        if (!ctx->InitFromRenderThread(g_nativeWindow, g_surfaceWidth, g_surfaceHeight)) {
             OHOS_LOGE(XCOMP_TAG, "Failed to initialize graphics context!");
             ERROR_LOG(Log::G3D, "Failed to initialize graphics context");
             g_renderLoopRunning.store(false);
             return;
         }
-        OHOS_LOGI(XCOMP_TAG, "GL context initialized successfully");
+        OHOS_LOGI(XCOMP_TAG, "Graphics context initialized successfully");
         
         // 初始化 PPSSPP 图形系统
         OHOS_LOGI(XCOMP_TAG, "Calling NativeInitGraphics...");
-        if (!NativeInitGraphics(g_glContext)) {
+        if (!NativeInitGraphics(ctx)) {
             OHOS_LOGE(XCOMP_TAG, "NativeInitGraphics failed!");
             ERROR_LOG(Log::G3D, "Failed to initialize PPSSPP graphics");
-            g_glContext->ShutdownFromRenderThread();
+            ctx->ShutdownFromRenderThread();
             g_renderLoopRunning.store(false);
             return;
         }
         OHOS_LOGI(XCOMP_TAG, "NativeInitGraphics succeeded");
         
-        OHOS_LOGI(XCOMP_TAG, "Calling ThreadStart...");
-        g_glContext->ThreadStart();
+        // OpenGL 需要调用 ThreadStart，Vulkan 不需要
+        if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
+            OHOS_LOGI(XCOMP_TAG, "Calling ThreadStart...");
+            g_glContext->ThreadStart();
+        }
         g_rendererInited = true;
         OHOS_LOGI(XCOMP_TAG, "Renderer initialized, entering main loop");
         
@@ -389,10 +452,12 @@ void RenderLoop() {
             frameNum++;
             
             // 渲染一帧
-            NativeFrame(g_glContext);
+            NativeFrame(ctx);
             
-            // 处理渲染线程任务
-            g_glContext->ThreadFrame(true);
+            // 处理渲染线程任务（仅 OpenGL 需要）
+            if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
+                g_glContext->ThreadFrame(true);
+            }
             
             // 更新帧统计
             g_frameCount.fetch_add(1);
@@ -418,6 +483,7 @@ void RenderLoop() {
             
             // 帧率控制：如果渲染太快，稍微休眠一下
             // 目标是 60 FPS (16.67ms per frame)
+            // 注意：Vulkan 有自己的 vsync 控制，这里的控制主要针对 OpenGL
             double frameTime = time_now_d() - frameStartTime;
             const double targetFrameTime = 1.0 / 60.0;  // 60 FPS
             if (frameTime < targetFrameTime) {
@@ -437,8 +503,14 @@ void RenderLoop() {
         // 清理
         NativeShutdownGraphics();
         g_rendererInited = false;
-        g_glContext->ThreadEnd();
-        g_glContext->ShutdownFromRenderThread();
+        
+        // 根据后端类型清理
+        if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
+            g_glContext->ThreadEnd();
+            g_glContext->ShutdownFromRenderThread();
+        } else if (g_currentBackend == GraphicsBackend::VULKAN && g_vulkanContext) {
+            g_vulkanContext->ShutdownFromRenderThread();
+        }
         
         g_renderLoopRunning.store(false);
         INFO_LOG(Log::G3D, "Render thread ended");
