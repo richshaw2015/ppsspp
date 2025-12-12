@@ -6,6 +6,7 @@
 #define NAPI_PPSSPP_H
 
 #include <napi/native_api.h>
+#include <string>
 
 namespace NapiPPSSPP {
 
@@ -73,6 +74,18 @@ napi_value SetVibrationCallback(napi_env env, napi_callback_info info);
  * 检查和设置震动配置
  */
 napi_value CheckVibrationConfig(napi_env env, napi_callback_info info);
+
+/**
+ * 设置打开 URL 的回调函数
+ * 参数: callback (function(url: string): boolean)
+ */
+napi_value SetOpenUrlCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用打开 URL
+ * 内部使用，不导出到 ArkTS
+ */
+bool OpenUrl(const std::string& url);
 
 } // namespace NapiPPSSPP
 

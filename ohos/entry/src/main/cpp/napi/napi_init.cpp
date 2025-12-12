@@ -423,6 +423,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"vibrate", nullptr, NapiPPSSPP::Vibrate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setVibrationCallback", nullptr, NapiPPSSPP::SetVibrationCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"checkVibrationConfig", nullptr, NapiPPSSPP::CheckVibrationConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setOpenUrlCallback", nullptr, NapiPPSSPP::SetOpenUrlCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     
     napi_status status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);

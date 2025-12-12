@@ -60,10 +60,21 @@ void System_Notify(SystemNotification notification) {
 // System 启动和交互函数
 // ============================================================================
 
+// 前向声明 - 在 napi_ppsspp.cpp 中实现
+namespace NapiPPSSPP {
+    bool OpenUrl(const std::string& url);
+}
+
 void System_LaunchUrl(LaunchUrlType urlType, std::string_view url) {
-    // 启动 URL - 空实现
-    // TODO: 实现鸿蒙浏览器启动
     INFO_LOG(Log::System, "System_LaunchUrl: type=%d, url=%.*s", (int)urlType, (int)url.size(), url.data());
+    
+    // 调用 NAPI 层打开 URL
+    std::string urlStr(url);
+    bool success = NapiPPSSPP::OpenUrl(urlStr);
+    
+    if (!success) {
+        WARN_LOG(Log::System, "System_LaunchUrl: failed to open URL");
+    }
 }
 
 std::vector<std::string> System_GetPropertyStringVec(SystemProperty prop) {

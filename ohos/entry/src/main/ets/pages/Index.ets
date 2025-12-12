@@ -3,6 +3,7 @@ import ppsspp from 'libppsspp_ohos.so';
 import common from '@ohos.app.ability.common';
 import windowManager from '@ohos.window';
 import vibrator from '@ohos.vibrator';
+import { Want } from '@kit.AbilityKit';
 
 @Entry
 @Component
@@ -24,6 +25,47 @@ struct Index {
       console.info(`[PPSSPP] Device supports vibration effects: ${isSupportEffect}`);
     } catch (err) {
       console.error(`[PPSSPP] Failed to check vibration support: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置打开 URL 回调函数
+   * 当 PPSSPP 需要打开外部链接（如"如何获得游戏？"）时会调用此回调
+   */
+  private setupOpenUrlCallback(): void {
+    console.info('[PPSSPP] Setting up open URL callback');
+    
+    try {
+      const success: boolean = ppsspp.setOpenUrlCallback((url: string): boolean => {
+        console.info(`[PPSSPP] Opening URL: ${url}`);
+        
+        try {
+          // 使用 Want 打开外部浏览器
+          const want: Want = {
+            action: 'ohos.want.action.viewData',
+            uri: url
+          };
+          
+          this.context.startAbility(want).then(() => {
+            console.info('[PPSSPP] Successfully opened URL in browser');
+          }).catch((err: Error) => {
+            console.error(`[PPSSPP] Failed to open URL: ${err.message}`);
+          });
+          
+          return true;
+        } catch (err) {
+          console.error(`[PPSSPP] Error opening URL: ${(err as Error).message}`);
+          return false;
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Open URL callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set open URL callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting open URL callback: ${(err as Error).message}`);
     }
   }
 
@@ -124,9 +166,10 @@ struct Index {
         // 检查震动权限
         this.checkVibrationPermission();
         
-        // 延迟设置震动回调，确保 PPSSPP 核心已完全初始化
+        // 延迟设置回调，确保 PPSSPP 核心已完全初始化
         setTimeout(() => {
           this.setupVibrationCallback();
+          this.setupOpenUrlCallback();
         }, 500);
         
         this.isInitialized = true;

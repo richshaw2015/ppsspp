@@ -67,6 +67,13 @@ declare namespace ppsspp {
    * @returns 震动配置是否启用
    */
   function checkVibrationConfig(): boolean;
+
+  /**
+   * 设置打开 URL 的回调函数
+   * 当 PPSSPP 需要打开外部链接时会调用此回调
+   * @param callback 回调函数，参数为 URL 字符串，返回是否成功打开
+   */
+  function setOpenUrlCallback(callback: (url: string) => boolean): boolean;
 }
 
 export default ppsspp;
