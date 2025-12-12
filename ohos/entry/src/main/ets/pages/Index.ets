@@ -3,6 +3,7 @@ import ppsspp from 'libppsspp_ohos.so';
 import common from '@ohos.app.ability.common';
 import windowManager from '@ohos.window';
 import vibrator from '@ohos.vibrator';
+import { promptAction } from '@kit.ArkUI';
 import { Want } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { fileIo } from '@kit.CoreFileKit';
@@ -16,6 +17,12 @@ struct Index {
   @State isInitialized: boolean = false;
   private context: common.UIAbilityContext = getContext() as common.UIAbilityContext;
   private lastKeyCode: number = 0;  // 用于检测重复按键
+  
+  // 文本输入对话框状态
+  @State showInputDialog: boolean = false;
+  @State inputDialogTitle: string = '';
+  @State inputDialogText: string = '';
+  private inputDialogRequestId: number = 0;
 
   /**
    * 检查震动权限和设备支持
@@ -370,6 +377,52 @@ struct Index {
   }
 
   /**
+   * 设置文本输入对话框回调函数
+   * 当 PPSSPP 需要用户输入文本（如重命名存档、输入金手指）时会调用此回调
+   */
+  private setupInputTextCallback(): void {
+    console.info('[PPSSPP] Setting up input text callback');
+    
+    try {
+      const success: boolean = ppsspp.setInputTextCallback((requestId: number, title: string, defaultText: string): void => {
+        console.info(`[PPSSPP] Input text requested, requestId: ${requestId}, title: ${title}`);
+        
+        // 设置对话框状态，触发 UI 显示
+        this.inputDialogRequestId = requestId;
+        this.inputDialogTitle = title;
+        this.inputDialogText = defaultText;
+        this.showInputDialog = true;
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Input text callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set input text callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting input text callback: ${(err as Error).message}`);
+    }
+  }
+  
+  /**
+   * 确认文本输入
+   */
+  private confirmInputText(): void {
+    console.info(`[PPSSPP] Input text confirmed: ${this.inputDialogText}`);
+    ppsspp.onInputTextCompleted(this.inputDialogRequestId, true, this.inputDialogText);
+    this.showInputDialog = false;
+  }
+  
+  /**
+   * 取消文本输入
+   */
+  private cancelInputText(): void {
+    console.info('[PPSSPP] Input text cancelled');
+    ppsspp.onInputTextCompleted(this.inputDialogRequestId, false, '');
+    this.showInputDialog = false;
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -473,6 +526,7 @@ struct Index {
           this.setupBrowseImageCallback();
           this.setupBrowseFileCallback();
           this.setupBrowseFolderCallback();
+          this.setupInputTextCallback();
         }, 500);
         
         this.isInitialized = true;
@@ -532,10 +586,83 @@ struct Index {
           .height('100%')
       }
       
+      // 文本输入对话框
+      if (this.showInputDialog) {
+        Column() {
+          // 半透明背景
+        }
+        .width('100%')
+        .height('100%')
+        .backgroundColor('rgba(0, 0, 0, 0.5)')
+        .onClick(() => {
+          this.cancelInputText();
+        })
+        
+        Column() {
+          // 标题
+          Text(this.inputDialogTitle)
+            .fontSize(18)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#333333')
+            .margin({ bottom: 16 })
+          
+          // 输入框
+          TextInput({ text: this.inputDialogText, placeholder: '' })
+            .width('100%')
+            .height(44)
+            .fontSize(16)
+            .backgroundColor('#F5F5F5')
+            .borderRadius(8)
+            .padding({ left: 12, right: 12 })
+            .onChange((value: string) => {
+              this.inputDialogText = value;
+            })
+          
+          // 按钮行
+          Row() {
+            Button('取消')
+              .fontSize(16)
+              .fontColor('#999999')
+              .backgroundColor(Color.Transparent)
+              .layoutWeight(1)
+              .height(44)
+              .onClick(() => {
+                this.cancelInputText();
+              })
+            
+            Divider()
+              .vertical(true)
+              .height(20)
+              .color('#E0E0E0')
+            
+            Button('确定')
+              .fontSize(16)
+              .fontColor('#007DFF')
+              .backgroundColor(Color.Transparent)
+              .layoutWeight(1)
+              .height(44)
+              .onClick(() => {
+                this.confirmInputText();
+              })
+          }
+          .width('100%')
+          .margin({ top: 16 })
+        }
+        .width('80%')
+        .padding(20)
+        .backgroundColor(Color.White)
+        .borderRadius(12)
+        .shadow({
+          radius: 20,
+          color: 'rgba(0, 0, 0, 0.2)',
+          offsetX: 0,
+          offsetY: 4
+        })
+      }
     }
-		// 横屏模式下扩展到安全区域
+    // 横屏模式下扩展到安全区域
     .width('100%')
     .height('100%')
-		.backgroundColor(Color.Black)
+    .backgroundColor(Color.Black)
   }
 }

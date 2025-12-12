@@ -140,6 +140,21 @@ declare namespace ppsspp {
    * @param path 选择的文件夹路径
    */
   function onFolderSelected(requestId: number, success: boolean, path: string): boolean;
+
+  /**
+   * 设置文本输入对话框的回调函数
+   * 当 PPSSPP 需要用户输入文本（如重命名存档、输入金手指）时会调用此回调
+   * @param callback 回调函数，参数为请求 ID、标题和默认文本
+   */
+  function setInputTextCallback(callback: (requestId: number, title: string, defaultText: string) => void): boolean;
+
+  /**
+   * 文本输入完成后的回调
+   * @param requestId 请求 ID
+   * @param success 是否成功输入（false 表示用户取消）
+   * @param text 用户输入的文本
+   */
+  function onInputTextCompleted(requestId: number, success: boolean, text: string): boolean;
 }
 
 export default ppsspp;

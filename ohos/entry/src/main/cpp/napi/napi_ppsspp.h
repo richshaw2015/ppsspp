@@ -158,6 +158,26 @@ bool BrowseForFolder(int requestId);
  */
 napi_value OnFolderSelected(napi_env env, napi_callback_info info);
 
+/**
+ * 设置文本输入对话框的回调函数
+ * 参数: callback (function(requestId: number, title: string, defaultText: string): void)
+ */
+napi_value SetInputTextCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用显示文本输入对话框
+ * @param requestId 请求 ID
+ * @param title 对话框标题
+ * @param defaultText 默认文本
+ */
+bool ShowInputTextDialog(int requestId, const std::string& title, const std::string& defaultText);
+
+/**
+ * 文本输入完成后的回调
+ * 参数: requestId (number), success (boolean), text (string)
+ */
+napi_value OnInputTextCompleted(napi_env env, napi_callback_info info);
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H

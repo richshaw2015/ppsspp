@@ -68,15 +68,19 @@
 - `ohos_system_properties.cpp` - System_MakeRequest 处理
 - `Index.ets` - ArkTS 层文件选择器调用
 
-#### 3. 文本输入对话框 - `INPUT_TEXT_MODAL`
-**当前状态**: 未实现
-**缺失功能**:
-- 弹出文本输入框
-- 获取用户输入
+#### 3. ~~文本输入对话框~~ - `INPUT_TEXT_MODAL` ✅ 已完成
+**当前状态**: 已完成
+**已实现功能**:
+- ✅ 弹出文本输入对话框
+- ✅ 获取用户输入文本
+- ✅ 支持取消操作
 
-**影响**: 无法重命名存档、输入金手指等
+**实现方式**: 使用自定义 UI 组件实现输入对话框，通过 `napi_threadsafe_function` 实现线程安全回调
 
-**实现建议**: 使用 OHOS `promptAction.showDialog` 或自定义对话框
+**相关文件**:
+- `napi_ppsspp.cpp` - C++ 层线程安全函数实现
+- `ohos_system_properties.cpp` - System_MakeRequest 处理
+- `Index.ets` - ArkTS 层自定义输入对话框 UI
 
 ---
 
@@ -161,7 +165,7 @@
 2. ~~**文件浏览器**~~ ✅ - 已完成
 
 ### 第二阶段（完善体验）
-3. **文本输入对话框** - 存档命名等
+3. ~~**文本输入对话框**~~ ✅ - 已完成
 4. **屏幕常亮** - 游戏体验
 5. **Toast 提示** - 用户反馈
 
@@ -187,10 +191,10 @@
 | `ohos_native_app_stubs.cpp` | NativeApp 桩 | 100% |
 | `ohos_rawfile_reader.cpp/h` | 资源读取 | 100% |
 | `ohos_system.cpp/h` | 系统管理 | 100% |
-| `ohos_system_properties.cpp` | 系统属性 | **90%** |
+| `ohos_system_properties.cpp` | 系统属性 | **95%** |
 | `ohos_system_stubs.cpp` | 系统函数桩 | **70%** |
 | `ohos_vibration.cpp/h` | 震动功能 | 100% |
 | `ohos_vr_stubs.cpp` | VR 桩 | 100% |
 | `ohos_xcomponent.cpp/h` | XComponent | 100% |
 | `napi/napi_init.cpp` | NAPI 注册 | 100% |
-| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **90%** |
+| `napi/napi_ppsspp.cpp/h` | NAPI 接口 | **95%** |

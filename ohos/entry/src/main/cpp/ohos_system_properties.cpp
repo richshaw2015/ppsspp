@@ -194,6 +194,7 @@ namespace NapiPPSSPP {
     bool BrowseForImage(int requestId);
     bool BrowseForFile(int requestId, int fileType);
     bool BrowseForFolder(int requestId);
+    bool ShowInputTextDialog(int requestId, const std::string& title, const std::string& defaultText);
 }
 
 // 实现 System_MakeRequest 函数
@@ -221,6 +222,12 @@ bool System_MakeRequest(
             // 调用 NAPI 层的文件夹选择器
             INFO_LOG(Log::System, "System_MakeRequest: BROWSE_FOR_FOLDER, requestId=%d", requestId);
             return NapiPPSSPP::BrowseForFolder(requestId);
+        
+        case SystemRequestType::INPUT_TEXT_MODAL:
+            // 调用 NAPI 层的文本输入对话框
+            // param1 = 标题, param2 = 默认文本
+            INFO_LOG(Log::System, "System_MakeRequest: INPUT_TEXT_MODAL, requestId=%d, title=%s", requestId, param1.c_str());
+            return NapiPPSSPP::ShowInputTextDialog(requestId, param1, param2);
         
         default:
             // 其他请求暂不实现

@@ -974,4 +974,160 @@ napi_value OnFolderSelected(napi_env env, napi_callback_info info) {
     return result;
 }
 
+// ============================================================================
+// 文本输入对话框功能 - 使用线程安全函数
+// ============================================================================
+
+// 文本输入请求数据
+struct InputTextRequest {
+    int requestId;
+    std::string title;
+    std::string defaultText;
+};
+
+// 线程安全函数，用于从任意线程调用 ArkTS 文本输入对话框
+static napi_threadsafe_function g_inputTextTsFunc = nullptr;
+
+// 线程安全函数的调用回调 - 在主线程执行
+static void InputTextCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "InputTextCallJs: invalid env or callback");
+        if (data) delete static_cast<InputTextRequest*>(data);
+        return;
+    }
+    
+    InputTextRequest* request = static_cast<InputTextRequest*>(data);
+    if (request == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "InputTextCallJs: request is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "InputTextCallJs: showing input dialog, requestId=%{public}d, title=%{public}s", 
+              request->requestId, request->title.c_str());
+    
+    // 创建参数
+    napi_value requestIdArg, titleArg, defaultTextArg;
+    napi_create_int32(env, request->requestId, &requestIdArg);
+    napi_create_string_utf8(env, request->title.c_str(), request->title.length(), &titleArg);
+    napi_create_string_utf8(env, request->defaultText.c_str(), request->defaultText.length(), &defaultTextArg);
+    
+    // 调用回调函数
+    napi_value result;
+    napi_value args[3] = { requestIdArg, titleArg, defaultTextArg };
+    napi_status status = napi_call_function(env, nullptr, js_callback, 3, args, &result);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "InputTextCallJs: failed to call callback, status=%{public}d", status);
+    }
+    
+    delete request;
+}
+
+napi_value SetInputTextCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetInputTextCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_inputTextTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_inputTextTsFunc, napi_tsfn_release);
+        g_inputTextTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "InputTextCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        InputTextCallJs, &g_inputTextTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetInputTextCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "InputText callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool ShowInputTextDialog(int requestId, const std::string& title, const std::string& defaultText) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "ShowInputTextDialog called: requestId=%{public}d, title=%{public}s", requestId, title.c_str());
+    
+    if (g_inputTextTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowInputTextDialog: callback not registered");
+        return false;
+    }
+    
+    InputTextRequest* request = new InputTextRequest{requestId, title, defaultText};
+    
+    napi_status status = napi_call_threadsafe_function(g_inputTextTsFunc, request, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "ShowInputTextDialog: failed to call threadsafe function");
+        delete request;
+        return false;
+    }
+    
+    return true;
+}
+
+napi_value OnInputTextCompleted(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "OnInputTextCompleted: requires 3 arguments");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    int32_t requestId = 0;
+    bool success = false;
+    std::string text;
+    
+    napi_get_value_int32(env, args[0], &requestId);
+    napi_get_value_bool(env, args[1], &success);
+    
+    size_t strSize = 0;
+    napi_get_value_string_utf8(env, args[2], nullptr, 0, &strSize);
+    if (strSize > 0) {
+        text.resize(strSize);
+        napi_get_value_string_utf8(env, args[2], &text[0], strSize + 1, &strSize);
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "OnInputTextCompleted: requestId=%{public}d, success=%{public}d, text=%{public}s",
+              requestId, success, text.c_str());
+    
+    if (success) {
+        g_requestManager.PostSystemSuccess(requestId, text.c_str());
+    } else {
+        g_requestManager.PostSystemFailure(requestId);
+    }
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
 } // namespace NapiPPSSPP
