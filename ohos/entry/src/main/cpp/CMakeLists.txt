@@ -11,6 +11,7 @@ option(USE_VULKAN "Enable Vulkan rendering backend" ON)
 # 定义编译宏
 add_definitions(
     -DOHOS=1
+    -D__OHOS__=1
     -DMOBILE_DEVICE=1
     -DUSING_GLES2=1
     -DUSING_EGL=1

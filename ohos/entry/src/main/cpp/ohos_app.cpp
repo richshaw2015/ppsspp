@@ -10,6 +10,7 @@
 #include "ohos_vibration.h"
 #include "ohos_hilog.h"  // 使用自定义的 hilog 包装器，避免 LogLevel 冲突
 #include "Common/System/NativeApp.h"
+#include "Common/GPU/Vulkan/VulkanLoader.h"  // for VulkanMayBeAvailable
 #include "Core/Config.h"
 #include <atomic>
 
@@ -47,7 +48,12 @@ bool Initialize() {
         return false;
     }
     
-    // 4. 初始化 PPSSPP Core
+    // 4. 检测 Vulkan 可用性
+    OHOS_LOGI(APP_TAG, "Checking Vulkan availability...");
+    bool vulkanAvailable = VulkanMayBeAvailable();
+    OHOS_LOGI(APP_TAG, "Vulkan available: %{public}s", vulkanAvailable ? "YES" : "NO");
+    
+    // 5. 初始化 PPSSPP Core
     // NativeInit 会初始化音频系统（通过 AudioBackend）
     OHOS_LOGI(APP_TAG, "Calling NativeInit...");
     

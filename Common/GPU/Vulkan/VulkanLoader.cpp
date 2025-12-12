@@ -344,6 +344,11 @@ static const char * const so_names[] = {
 #elif PPSSPP_PLATFORM(MAC)
 	"@executable_path/../Frameworks/libMoltenVK.dylib",
 	"MoltenVK",
+#elif PPSSPP_PLATFORM(OHOS)
+	// OHOS Vulkan library paths
+	"libvulkan.so",
+	"/system/lib64/libvulkan.so",
+	"/system/lib/libvulkan.so",
 #else
 	"libvulkan.so",
 #if !defined(__ANDROID__) && !defined(OHOS) && !defined(__OHOS__)

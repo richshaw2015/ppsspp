@@ -685,31 +685,31 @@ struct Index {
   /**
    * 设置重建 Activity 回调函数
    * 当 PPSSPP 需要重建 Activity（如显示设置变更）时会调用此回调
+   * 
+   * 注意：与 Android 不同，OHOS 不需要重建整个 Activity 来应用分辨率变更
+   * 分辨率变更会通过 GPU_RENDER_RESIZED 消息动态处理，不需要重启应用
    */
   private setupRecreateActivityCallback(): void {
     console.info('[PPSSPP] Setting up recreate activity callback');
     
     try {
       const success: boolean = ppsspp.setRecreateActivityCallback((): void => {
-        console.info('[PPSSPP] Recreate activity requested');
+        console.info('[PPSSPP] Recreate activity requested - handling gracefully on OHOS');
         
-        // 在 OHOS 上，重建 Activity 可以通过重启应用实现
-        // 或者重新创建 XComponent
-        try {
-          const want: Want = {
-            bundleName: this.context.abilityInfo.bundleName,
-            abilityName: this.context.abilityInfo.name
-          };
-          
-          this.context.startAbility(want).then(() => {
-            console.info('[PPSSPP] New instance started for recreate');
-            this.context.terminateSelf();
-          }).catch((err: Error) => {
-            console.error(`[PPSSPP] Failed to recreate activity: ${err.message}`);
-          });
-        } catch (err) {
-          console.error(`[PPSSPP] Error recreating activity: ${(err as Error).message}`);
-        }
+        // 在 OHOS 上，分辨率变更不需要重建 Activity
+        // Android 的 recreate() 只是重建视图，不会退出应用
+        // 而 OHOS 的 terminateSelf() 会完全退出应用
+        // 
+        // 解决方案：不执行任何操作，让 PPSSPP 通过 GPU_RENDER_RESIZED 消息处理
+        // 这样分辨率变更会动态生效，不会导致应用退出
+        
+        console.info('[PPSSPP] Resolution change will be handled dynamically without restarting');
+        
+        // 可选：显示一个提示告知用户设置已生效
+        promptAction.showToast({
+          message: '分辨率设置已更新',
+          duration: 2000
+        });
       });
       
       if (success) {
