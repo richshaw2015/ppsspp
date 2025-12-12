@@ -148,7 +148,7 @@ bool Initialize() {
                             if (strcmp(ext.extensionName, "VK_KHR_surface") == 0) {
                                 foundSurface = true;
                             }
-                            if (strcmp(ext.extensionName, "VK_KHR_android_surface") == 0) {
+                            if (strcmp(ext.extensionName, "VK_OHOS_surface") == 0) {
                                 foundAndroidSurface = true;
                             }
                         }
@@ -156,7 +156,7 @@ bool Initialize() {
                         if (!foundSurface) {
                             OHOS_LOGE(APP_TAG, "VK_KHR_surface extension not found");
                         } else if (!foundAndroidSurface) {
-                            OHOS_LOGE(APP_TAG, "VK_KHR_android_surface extension not found");
+                            OHOS_LOGE(APP_TAG, "VK_OHOS_surface extension not found");
                         } else {
                             OHOS_LOGI(APP_TAG, "Required surface extensions found");
                             
@@ -171,7 +171,7 @@ bool Initialize() {
                             
                             const char* extensionNames[] = {
                                 "VK_KHR_surface",
-                                "VK_KHR_android_surface"
+                                "VK_OHOS_surface"
                             };
                             
                             VkInstanceCreateInfo createInfo = {};
@@ -242,6 +242,14 @@ bool Initialize() {
     }
     
     OHOS_LOGI(APP_TAG, "=== Vulkan check complete ===");
+    
+    // 显示最终配置的渲染后端
+    OHOS_LOGI(APP_TAG, "=== Current Rendering Configuration ===");
+    OHOS_LOGI(APP_TAG, "Configured GPU backend: %{public}s", g_Config.iGPUBackend == 0 ? "OpenGL" : 
+              g_Config.iGPUBackend == 4 ? "Vulkan" : "Unknown");
+    OHOS_LOGI(APP_TAG, "GPU backend value: %{public}d", g_Config.iGPUBackend);
+    OHOS_LOGI(APP_TAG, "Vulkan available: %{public}s", VulkanMayBeAvailable() ? "YES" : "NO");
+    OHOS_LOGI(APP_TAG, "=== End Configuration ===");
     
     // 5. 初始化 PPSSPP Core
     // NativeInit 会初始化音频系统（通过 AudioBackend）

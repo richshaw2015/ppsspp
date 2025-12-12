@@ -19,7 +19,9 @@
 
 #include "ppsspp_config.h"
 
-#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS)
+#if PPSSPP_PLATFORM(OHOS)
+// HarmonyOS uses its own Vulkan surface extension
+#elif PPSSPP_PLATFORM(ANDROID)
 #define VK_USE_PLATFORM_ANDROID_KHR
 #elif defined(_WIN32)
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -37,6 +39,11 @@
 #endif
 
 #include "ext/vulkan/vulkan.h"
+
+#if PPSSPP_PLATFORM(OHOS)
+#include "ext/vulkan/vulkan_ohos.h"
+#endif
+
 #include <string>
 
 // Hacky X11 header workaround

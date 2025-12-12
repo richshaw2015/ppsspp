@@ -143,7 +143,10 @@ VkResult VulkanContext::CreateInstance(const CreateInfo &info) {
 	instance_extensions_enabled_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 #ifdef _WIN32
 	instance_extensions_enabled_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
+#elif defined(OHOS) || defined(__OHOS__)
+	// HarmonyOS uses VK_OHOS_surface instead of VK_KHR_android_surface
+	instance_extensions_enabled_.push_back("VK_OHOS_surface");
+#elif defined(__ANDROID__)
 	instance_extensions_enabled_.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #else
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
@@ -980,15 +983,41 @@ VkResult VulkanContext::ReinitSurface() {
 		break;
 	}
 #endif
-#if defined(__ANDROID__) || defined(OHOS) || defined(__OHOS__)
+#if defined(__ANDROID__)
 	case WINDOWSYSTEM_ANDROID:
 	{
-		// Works for both Android and OHOS - both use ANativeWindow
+		// Android specific surface creation
 		ANativeWindow *wnd = (ANativeWindow *)winsysData1_;
 		VkAndroidSurfaceCreateInfoKHR android{ VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR };
 		android.flags = 0;
 		android.window = wnd;
 		retval = vkCreateAndroidSurfaceKHR(instance_, &android, nullptr, &surface_);
+		break;
+	}
+#endif
+#if defined(OHOS) || defined(__OHOS__)
+	case WINDOWSYSTEM_ANDROID:
+	{
+		// HarmonyOS specific surface creation using OHOS surface
+		OHNativeWindow *wnd = (OHNativeWindow *)winsysData1_;
+		
+		// HarmonyOS uses vkCreateSurfaceOHOS
+		typedef VkResult (VKAPI_PTR *PFN_vkCreateSurfaceOHOS)(VkInstance instance, const VkSurfaceCreateInfoOHOS* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkSurfaceKHR* pSurface);
+		PFN_vkCreateSurfaceOHOS vkCreateSurfaceOHOS = 
+			(PFN_vkCreateSurfaceOHOS)vkGetInstanceProcAddr(instance_, "vkCreateSurfaceOHOS");
+		
+		if (vkCreateSurfaceOHOS) {
+			// OHOS surface create info structure
+			VkSurfaceCreateInfoOHOS ohosInfo = {};
+			ohosInfo.sType = (VkStructureType)1000151000;  // VK_STRUCTURE_TYPE_SURFACE_CREATE_INFO_OHOS
+			ohosInfo.pNext = nullptr;
+			ohosInfo.flags = 0;
+			ohosInfo.window = wnd;
+			
+			retval = vkCreateSurfaceOHOS(instance_, &ohosInfo, nullptr, &surface_);
+		} else {
+			retval = VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
 		break;
 	}
 #endif
