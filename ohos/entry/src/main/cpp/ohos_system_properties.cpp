@@ -189,6 +189,11 @@ float System_GetPropertyFloat(SystemProperty prop) {
     return std::stof(value);
 }
 
+// 前向声明 - 来自 napi_ppsspp.cpp
+namespace NapiPPSSPP {
+    bool BrowseForImage(int requestId);
+}
+
 // 实现 System_MakeRequest 函数
 bool System_MakeRequest(
     SystemRequestType type,
@@ -197,8 +202,16 @@ bool System_MakeRequest(
     const std::string &param2,
     int64_t param3,
     int64_t param4) {
-    // HarmonyOS 暂不实现系统请求
-    // 这些请求包括：打开浏览器、分享、输入框等
-    WARN_LOG(Log::System, "System_MakeRequest not implemented: type=%d", (int)type);
-    return false;  // 返回 false 表示请求失败
+    
+    switch (type) {
+        case SystemRequestType::BROWSE_FOR_IMAGE:
+            // 调用 NAPI 层的图片选择器
+            INFO_LOG(Log::System, "System_MakeRequest: BROWSE_FOR_IMAGE, requestId=%d", requestId);
+            return NapiPPSSPP::BrowseForImage(requestId);
+        
+        default:
+            // 其他请求暂不实现
+            WARN_LOG(Log::System, "System_MakeRequest not implemented: type=%d", (int)type);
+            return false;
+    }
 }

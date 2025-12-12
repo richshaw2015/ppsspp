@@ -74,6 +74,22 @@ declare namespace ppsspp {
    * @param callback 回调函数，参数为 URL 字符串，返回是否成功打开
    */
   function setOpenUrlCallback(callback: (url: string) => boolean): boolean;
+
+  /**
+   * 设置浏览图片的回调函数
+   * 当 PPSSPP 需要选择图片（如自定义壁纸）时会调用此回调
+   * @param callback 回调函数，参数为请求 ID
+   */
+  function setBrowseImageCallback(callback: (requestId: number) => void): boolean;
+
+  /**
+   * 图片选择完成后的回调
+   * 从 ArkTS 层调用，通知 C++ 层选择结果
+   * @param requestId 请求 ID
+   * @param success 是否成功选择
+   * @param path 选择的图片路径
+   */
+  function onImageSelected(requestId: number, success: boolean, path: string): boolean;
 }
 
 export default ppsspp;

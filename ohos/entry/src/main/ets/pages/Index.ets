@@ -4,6 +4,8 @@ import common from '@ohos.app.ability.common';
 import windowManager from '@ohos.window';
 import vibrator from '@ohos.vibrator';
 import { Want } from '@kit.AbilityKit';
+import { photoAccessHelper } from '@kit.MediaLibraryKit';
+import { fileIo } from '@kit.CoreFileKit';
 
 @Entry
 @Component
@@ -66,6 +68,116 @@ struct Index {
       }
     } catch (err) {
       console.error(`[PPSSPP] Error setting open URL callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 设置浏览图片回调函数
+   * 当 PPSSPP 需要选择图片（如自定义壁纸）时会调用此回调
+   */
+  private setupBrowseImageCallback(): void {
+    console.info('[PPSSPP] Setting up browse image callback');
+    
+    try {
+      const success: boolean = ppsspp.setBrowseImageCallback(async (requestId: number): Promise<void> => {
+        console.info(`[PPSSPP] Browse image requested, requestId: ${requestId}`);
+        
+        try {
+          // 创建图片选择器
+          const photoPicker = new photoAccessHelper.PhotoViewPicker();
+          
+          // 配置选择选项
+          const photoSelectOptions = new photoAccessHelper.PhotoSelectOptions();
+          photoSelectOptions.MIMEType = photoAccessHelper.PhotoViewMIMETypes.IMAGE_TYPE;
+          photoSelectOptions.maxSelectNumber = 1;
+          
+          // 打开图片选择器
+          const photoSelectResult = await photoPicker.select(photoSelectOptions);
+          
+          if (photoSelectResult && photoSelectResult.photoUris && photoSelectResult.photoUris.length > 0) {
+            const selectedUri = photoSelectResult.photoUris[0];
+            console.info(`[PPSSPP] Image selected: ${selectedUri}`);
+            
+            // 将图片复制到应用沙箱目录，因为 PPSSPP 需要直接访问文件
+            const destPath = await this.copyImageToSandbox(selectedUri, requestId);
+            
+            if (destPath) {
+              console.info(`[PPSSPP] Image copied to: ${destPath}`);
+              ppsspp.onImageSelected(requestId, true, destPath);
+            } else {
+              console.error('[PPSSPP] Failed to copy image to sandbox');
+              ppsspp.onImageSelected(requestId, false, '');
+            }
+          } else {
+            console.info('[PPSSPP] No image selected (user cancelled)');
+            ppsspp.onImageSelected(requestId, false, '');
+          }
+        } catch (err) {
+          console.error(`[PPSSPP] Error selecting image: ${(err as Error).message}`);
+          ppsspp.onImageSelected(requestId, false, '');
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Browse image callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set browse image callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting browse image callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 将选择的图片复制到应用沙箱目录
+   * @param uri 图片 URI
+   * @param requestId 请求 ID（用于生成唯一文件名）
+   * @returns 复制后的文件路径，失败返回 null
+   */
+  private async copyImageToSandbox(uri: string, requestId: number): Promise<string | null> {
+    try {
+      // 打开源文件
+      const srcFile = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+      
+      // 获取文件扩展名
+      let ext = '.png';
+      if (uri.toLowerCase().includes('.jpg') || uri.toLowerCase().includes('.jpeg')) {
+        ext = '.jpg';
+      } else if (uri.toLowerCase().includes('.png')) {
+        ext = '.png';
+      } else if (uri.toLowerCase().includes('.bmp')) {
+        ext = '.bmp';
+      }
+      
+      // 生成目标文件路径
+      const timestamp = Date.now();
+      const destFileName = `wallpaper_${requestId}_${timestamp}${ext}`;
+      const destPath = `${this.context.filesDir}/${destFileName}`;
+      
+      // 创建目标文件
+      const destFile = await fileIo.open(destPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+      
+      // 复制文件内容
+      const bufferSize = 4096;
+      const buffer = new ArrayBuffer(bufferSize);
+      let bytesRead: number;
+      
+      do {
+        bytesRead = await fileIo.read(srcFile.fd, buffer);
+        if (bytesRead > 0) {
+          await fileIo.write(destFile.fd, buffer, { length: bytesRead });
+        }
+      } while (bytesRead > 0);
+      
+      // 关闭文件
+      await fileIo.close(srcFile);
+      await fileIo.close(destFile);
+      
+      console.info(`[PPSSPP] Image copied successfully: ${destPath}`);
+      return destPath;
+    } catch (err) {
+      console.error(`[PPSSPP] Error copying image: ${(err as Error).message}`);
+      return null;
     }
   }
 
@@ -170,6 +282,7 @@ struct Index {
         setTimeout(() => {
           this.setupVibrationCallback();
           this.setupOpenUrlCallback();
+          this.setupBrowseImageCallback();
         }, 500);
         
         this.isInitialized = true;

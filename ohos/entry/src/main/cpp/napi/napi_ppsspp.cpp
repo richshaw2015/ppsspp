@@ -8,6 +8,7 @@
 #include "../ohos_hilog.h"  // 使用自定义的 hilog 包装器，避免 LogLevel 冲突
 #include "../ohos_vibration.h"
 #include "Core/Config.h"
+#include "Common/System/Request.h"  // for g_requestManager
 #include <string>
 
 #define NAPI_PPSSPP_TAG "PPSSPP_NAPI_PPSSPP"
@@ -401,6 +402,182 @@ bool OpenUrl(const std::string& url) {
     
     OHOS_LOGI(NAPI_PPSSPP_TAG, "OpenUrl: request sent to main thread");
     return true;
+}
+
+// ============================================================================
+// 浏览图片功能 - 使用线程安全函数
+// ============================================================================
+
+// 线程安全函数，用于从任意线程调用 ArkTS 图片选择器
+static napi_threadsafe_function g_browseImageTsFunc = nullptr;
+
+// 线程安全函数的调用回调 - 在主线程执行
+static void BrowseImageCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseImageCallJs: invalid env or callback");
+        return;
+    }
+    
+    int* requestIdPtr = static_cast<int*>(data);
+    if (requestIdPtr == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseImageCallJs: requestId is null");
+        return;
+    }
+    
+    int requestId = *requestIdPtr;
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseImageCallJs: opening image picker on main thread, requestId=%{public}d", requestId);
+    
+    // 创建 requestId 参数
+    napi_value requestIdArg;
+    napi_status status = napi_create_int32(env, requestId, &requestIdArg);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseImageCallJs: failed to create requestId");
+        delete requestIdPtr;
+        return;
+    }
+    
+    // 调用回调函数
+    napi_value result;
+    napi_value args[1] = { requestIdArg };
+    status = napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseImageCallJs: failed to call callback function, status=%{public}d", status);
+    } else {
+        OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseImageCallJs: callback called successfully");
+    }
+    
+    // 清理
+    delete requestIdPtr;
+}
+
+napi_value SetBrowseImageCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetBrowseImageCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetBrowseImageCallback: missing callback argument");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 检查参数是否为函数
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetBrowseImageCallback: argument is not a function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 清理之前的线程安全函数
+    if (g_browseImageTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_browseImageTsFunc, napi_tsfn_release);
+        g_browseImageTsFunc = nullptr;
+    }
+    
+    // 创建资源名称
+    napi_value resourceName;
+    napi_create_string_utf8(env, "BrowseImageCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    // 创建线程安全函数
+    napi_status status = napi_create_threadsafe_function(
+        env,
+        args[0],              // JS 回调函数
+        nullptr,              // async_resource
+        resourceName,         // async_resource_name
+        0,                    // max_queue_size (0 = 无限制)
+        1,                    // initial_thread_count
+        nullptr,              // thread_finalize_data
+        nullptr,              // thread_finalize_cb
+        nullptr,              // context
+        BrowseImageCallJs,    // call_js_cb
+        &g_browseImageTsFunc  // result
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetBrowseImageCallback: failed to create threadsafe function, status=%{public}d", status);
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseImage threadsafe callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool BrowseForImage(int requestId) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseForImage called: requestId=%{public}d", requestId);
+    
+    if (g_browseImageTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForImage: threadsafe callback not registered");
+        return false;
+    }
+    
+    // 复制 requestId，因为需要传递给主线程
+    int* requestIdCopy = new int(requestId);
+    
+    // 调用线程安全函数，将请求发送到主线程
+    napi_status status = napi_call_threadsafe_function(g_browseImageTsFunc, requestIdCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForImage: failed to call threadsafe function, status=%{public}d", status);
+        delete requestIdCopy;
+        return false;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseForImage: request sent to main thread");
+    return true;
+}
+
+napi_value OnImageSelected(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "OnImageSelected: requires 3 arguments (requestId, success, path)");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 获取 requestId
+    int32_t requestId = 0;
+    napi_get_value_int32(env, args[0], &requestId);
+    
+    // 获取 success
+    bool success = false;
+    napi_get_value_bool(env, args[1], &success);
+    
+    // 获取 path
+    std::string path;
+    size_t strSize = 0;
+    napi_get_value_string_utf8(env, args[2], nullptr, 0, &strSize);
+    if (strSize > 0) {
+        path.resize(strSize);
+        napi_get_value_string_utf8(env, args[2], &path[0], strSize + 1, &strSize);
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "OnImageSelected: requestId=%{public}d, success=%{public}d, path=%{public}s",
+              requestId, success, path.c_str());
+    
+    // 通知 RequestManager
+    if (success && !path.empty()) {
+        g_requestManager.PostSystemSuccess(requestId, path.c_str());
+    } else {
+        g_requestManager.PostSystemFailure(requestId);
+    }
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
 }
 
 } // namespace NapiPPSSPP

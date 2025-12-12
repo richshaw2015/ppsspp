@@ -87,6 +87,26 @@ napi_value SetOpenUrlCallback(napi_env env, napi_callback_info info);
  */
 bool OpenUrl(const std::string& url);
 
+/**
+ * 设置浏览图片的回调函数
+ * 参数: callback (function(requestId: number): void)
+ */
+napi_value SetBrowseImageCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用浏览图片
+ * 内部使用，不导出到 ArkTS
+ * @param requestId 请求 ID，用于回调时匹配
+ */
+bool BrowseForImage(int requestId);
+
+/**
+ * 图片选择完成后的回调
+ * 从 ArkTS 层调用，通知 C++ 层选择结果
+ * 参数: requestId (number), success (boolean), path (string)
+ */
+napi_value OnImageSelected(napi_env env, napi_callback_info info);
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H
