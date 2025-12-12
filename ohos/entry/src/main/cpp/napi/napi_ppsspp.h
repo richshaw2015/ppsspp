@@ -121,6 +121,43 @@ bool BrowseForImage(int requestId);
  */
 napi_value OnImageSelected(napi_env env, napi_callback_info info);
 
+/**
+ * 设置浏览文件的回调函数
+ * 参数: callback (function(requestId: number, fileType: number): void)
+ */
+napi_value SetBrowseFileCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用浏览文件
+ * @param requestId 请求 ID
+ * @param fileType 文件类型 (BrowseFileType)
+ */
+bool BrowseForFile(int requestId, int fileType);
+
+/**
+ * 文件选择完成后的回调
+ * 参数: requestId (number), success (boolean), path (string)
+ */
+napi_value OnFileSelected(napi_env env, napi_callback_info info);
+
+/**
+ * 设置浏览文件夹的回调函数
+ * 参数: callback (function(requestId: number): void)
+ */
+napi_value SetBrowseFolderCallback(napi_env env, napi_callback_info info);
+
+/**
+ * 从 C++ 层调用浏览文件夹
+ * @param requestId 请求 ID
+ */
+bool BrowseForFolder(int requestId);
+
+/**
+ * 文件夹选择完成后的回调
+ * 参数: requestId (number), success (boolean), path (string)
+ */
+napi_value OnFolderSelected(napi_env env, napi_callback_info info);
+
 } // namespace NapiPPSSPP
 
 #endif // NAPI_PPSSPP_H

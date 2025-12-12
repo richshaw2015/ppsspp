@@ -675,4 +675,303 @@ napi_value OnImageSelected(napi_env env, napi_callback_info info) {
     return result;
 }
 
+// ============================================================================
+// 浏览文件功能 - 使用线程安全函数
+// ============================================================================
+
+// 文件浏览请求数据
+struct BrowseFileRequest {
+    int requestId;
+    int fileType;  // BrowseFileType
+};
+
+// 线程安全函数，用于从任意线程调用 ArkTS 文件选择器
+static napi_threadsafe_function g_browseFileTsFunc = nullptr;
+
+// 线程安全函数的调用回调 - 在主线程执行
+static void BrowseFileCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFileCallJs: invalid env or callback");
+        if (data) delete static_cast<BrowseFileRequest*>(data);
+        return;
+    }
+    
+    BrowseFileRequest* request = static_cast<BrowseFileRequest*>(data);
+    if (request == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFileCallJs: request is null");
+        return;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseFileCallJs: opening file picker, requestId=%{public}d, fileType=%{public}d", 
+              request->requestId, request->fileType);
+    
+    // 创建参数
+    napi_value requestIdArg, fileTypeArg;
+    napi_create_int32(env, request->requestId, &requestIdArg);
+    napi_create_int32(env, request->fileType, &fileTypeArg);
+    
+    // 调用回调函数
+    napi_value result;
+    napi_value args[2] = { requestIdArg, fileTypeArg };
+    napi_status status = napi_call_function(env, nullptr, js_callback, 2, args, &result);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFileCallJs: failed to call callback, status=%{public}d", status);
+    }
+    
+    delete request;
+}
+
+napi_value SetBrowseFileCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetBrowseFileCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_browseFileTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_browseFileTsFunc, napi_tsfn_release);
+        g_browseFileTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "BrowseFileCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        BrowseFileCallJs, &g_browseFileTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetBrowseFileCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseFile callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool BrowseForFile(int requestId, int fileType) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseForFile called: requestId=%{public}d, fileType=%{public}d", requestId, fileType);
+    
+    if (g_browseFileTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForFile: callback not registered");
+        return false;
+    }
+    
+    BrowseFileRequest* request = new BrowseFileRequest{requestId, fileType};
+    
+    napi_status status = napi_call_threadsafe_function(g_browseFileTsFunc, request, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForFile: failed to call threadsafe function");
+        delete request;
+        return false;
+    }
+    
+    return true;
+}
+
+napi_value OnFileSelected(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "OnFileSelected: requires 3 arguments");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    int32_t requestId = 0;
+    bool success = false;
+    std::string path;
+    
+    napi_get_value_int32(env, args[0], &requestId);
+    napi_get_value_bool(env, args[1], &success);
+    
+    size_t strSize = 0;
+    napi_get_value_string_utf8(env, args[2], nullptr, 0, &strSize);
+    if (strSize > 0) {
+        path.resize(strSize);
+        napi_get_value_string_utf8(env, args[2], &path[0], strSize + 1, &strSize);
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "OnFileSelected: requestId=%{public}d, success=%{public}d, path=%{public}s",
+              requestId, success, path.c_str());
+    
+    if (success && !path.empty()) {
+        g_requestManager.PostSystemSuccess(requestId, path.c_str());
+    } else {
+        g_requestManager.PostSystemFailure(requestId);
+    }
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+// ============================================================================
+// 浏览文件夹功能 - 使用线程安全函数
+// ============================================================================
+
+// 线程安全函数，用于从任意线程调用 ArkTS 文件夹选择器
+static napi_threadsafe_function g_browseFolderTsFunc = nullptr;
+
+// 线程安全函数的调用回调 - 在主线程执行
+static void BrowseFolderCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFolderCallJs: invalid env or callback");
+        if (data) delete static_cast<int*>(data);
+        return;
+    }
+    
+    int* requestIdPtr = static_cast<int*>(data);
+    if (requestIdPtr == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFolderCallJs: requestId is null");
+        return;
+    }
+    
+    int requestId = *requestIdPtr;
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseFolderCallJs: opening folder picker, requestId=%{public}d", requestId);
+    
+    napi_value requestIdArg;
+    napi_create_int32(env, requestId, &requestIdArg);
+    
+    napi_value result;
+    napi_value args[1] = { requestIdArg };
+    napi_status status = napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseFolderCallJs: failed to call callback, status=%{public}d", status);
+    }
+    
+    delete requestIdPtr;
+}
+
+napi_value SetBrowseFolderCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetBrowseFolderCallback called");
+    
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    napi_valuetype valueType;
+    napi_typeof(env, args[0], &valueType);
+    if (valueType != napi_function) {
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_browseFolderTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_browseFolderTsFunc, napi_tsfn_release);
+        g_browseFolderTsFunc = nullptr;
+    }
+    
+    napi_value resourceName;
+    napi_create_string_utf8(env, "BrowseFolderCallback", NAPI_AUTO_LENGTH, &resourceName);
+    
+    napi_status status = napi_create_threadsafe_function(
+        env, args[0], nullptr, resourceName, 0, 1, nullptr, nullptr, nullptr,
+        BrowseFolderCallJs, &g_browseFolderTsFunc
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetBrowseFolderCallback: failed to create threadsafe function");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseFolder callback registered successfully");
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+bool BrowseForFolder(int requestId) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "BrowseForFolder called: requestId=%{public}d", requestId);
+    
+    if (g_browseFolderTsFunc == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForFolder: callback not registered");
+        return false;
+    }
+    
+    int* requestIdCopy = new int(requestId);
+    
+    napi_status status = napi_call_threadsafe_function(g_browseFolderTsFunc, requestIdCopy, napi_tsfn_nonblocking);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "BrowseForFolder: failed to call threadsafe function");
+        delete requestIdCopy;
+        return false;
+    }
+    
+    return true;
+}
+
+napi_value OnFolderSelected(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 3) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "OnFolderSelected: requires 3 arguments");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    int32_t requestId = 0;
+    bool success = false;
+    std::string path;
+    
+    napi_get_value_int32(env, args[0], &requestId);
+    napi_get_value_bool(env, args[1], &success);
+    
+    size_t strSize = 0;
+    napi_get_value_string_utf8(env, args[2], nullptr, 0, &strSize);
+    if (strSize > 0) {
+        path.resize(strSize);
+        napi_get_value_string_utf8(env, args[2], &path[0], strSize + 1, &strSize);
+    }
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "OnFolderSelected: requestId=%{public}d, success=%{public}d, path=%{public}s",
+              requestId, success, path.c_str());
+    
+    if (success && !path.empty()) {
+        g_requestManager.PostSystemSuccess(requestId, path.c_str());
+    } else {
+        g_requestManager.PostSystemFailure(requestId);
+    }
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
 } // namespace NapiPPSSPP

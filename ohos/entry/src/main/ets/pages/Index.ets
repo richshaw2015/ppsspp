@@ -6,6 +6,7 @@ import vibrator from '@ohos.vibrator';
 import { Want } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { fileIo } from '@kit.CoreFileKit';
+import { picker } from '@kit.CoreFileKit';
 
 @Entry
 @Component
@@ -183,6 +184,192 @@ struct Index {
   }
 
   /**
+   * 设置浏览文件回调函数
+   * 当 PPSSPP 需要选择文件（如游戏 ISO、存档等）时会调用此回调
+   */
+  private setupBrowseFileCallback(): void {
+    console.info('[PPSSPP] Setting up browse file callback');
+    
+    try {
+      const success: boolean = ppsspp.setBrowseFileCallback(async (requestId: number, fileType: number): Promise<void> => {
+        console.info(`[PPSSPP] Browse file requested, requestId: ${requestId}, fileType: ${fileType}`);
+        
+        try {
+          // 根据文件类型确定文件后缀过滤
+          let suffixFilters: string[] = [];
+          switch (fileType) {
+            case 0: // BOOTABLE - 游戏文件
+              suffixFilters = ['.iso', '.cso', '.pbp', '.elf', '.prx', '.bin'];
+              break;
+            case 1: // IMAGE
+              suffixFilters = ['.png', '.jpg', '.jpeg', '.bmp'];
+              break;
+            case 2: // INI
+              suffixFilters = ['.ini'];
+              break;
+            case 3: // DB
+              suffixFilters = ['.db'];
+              break;
+            case 4: // SOUND_EFFECT
+              suffixFilters = ['.wav', '.mp3', '.ogg'];
+              break;
+            case 5: // ZIP
+              suffixFilters = ['.zip'];
+              break;
+            case 6: // SYMBOL_MAP
+            case 7: // SYMBOL_MAP_NOCASH
+              suffixFilters = ['.map', '.sym'];
+              break;
+            case 8: // ATRAC3
+              suffixFilters = ['.at3', '.aa3'];
+              break;
+            default: // ANY
+              suffixFilters = ['*'];
+              break;
+          }
+          
+          // 创建文件选择器
+          const documentPicker = new picker.DocumentViewPicker(this.context);
+          const documentSelectOptions = new picker.DocumentSelectOptions();
+          documentSelectOptions.maxSelectNumber = 1;
+          // 注意：OHOS 的 DocumentViewPicker 可能不支持后缀过滤，这里仅作记录
+          
+          // 打开文件选择器
+          const documentSelectResult = await documentPicker.select(documentSelectOptions);
+          
+          if (documentSelectResult && documentSelectResult.length > 0) {
+            const selectedUri = documentSelectResult[0];
+            console.info(`[PPSSPP] File selected: ${selectedUri}`);
+            
+            // 将文件复制到应用沙箱目录
+            const destPath = await this.copyFileToSandbox(selectedUri, requestId);
+            
+            if (destPath) {
+              console.info(`[PPSSPP] File copied to: ${destPath}`);
+              ppsspp.onFileSelected(requestId, true, destPath);
+            } else {
+              console.error('[PPSSPP] Failed to copy file to sandbox');
+              ppsspp.onFileSelected(requestId, false, '');
+            }
+          } else {
+            console.info('[PPSSPP] No file selected (user cancelled)');
+            ppsspp.onFileSelected(requestId, false, '');
+          }
+        } catch (err) {
+          console.error(`[PPSSPP] Error selecting file: ${(err as Error).message}`);
+          ppsspp.onFileSelected(requestId, false, '');
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Browse file callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set browse file callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting browse file callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 将选择的文件复制到应用沙箱目录
+   * @param uri 文件 URI
+   * @param requestId 请求 ID（用于生成唯一文件名）
+   * @returns 复制后的文件路径，失败返回 null
+   */
+  private async copyFileToSandbox(uri: string, requestId: number): Promise<string | null> {
+    try {
+      // 打开源文件
+      const srcFile = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+      
+      // 从 URI 中提取文件名
+      let fileName = `file_${requestId}_${Date.now()}`;
+      const uriParts = uri.split('/');
+      if (uriParts.length > 0) {
+        const lastPart = uriParts[uriParts.length - 1];
+        if (lastPart && lastPart.includes('.')) {
+          fileName = lastPart;
+        }
+      }
+      
+      // 生成目标文件路径
+      const destPath = `${this.context.filesDir}/${fileName}`;
+      
+      // 创建目标文件
+      const destFile = await fileIo.open(destPath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+      
+      // 复制文件内容
+      const bufferSize = 65536; // 64KB
+      const buffer = new ArrayBuffer(bufferSize);
+      let bytesRead: number;
+      
+      do {
+        bytesRead = await fileIo.read(srcFile.fd, buffer);
+        if (bytesRead > 0) {
+          await fileIo.write(destFile.fd, buffer, { length: bytesRead });
+        }
+      } while (bytesRead > 0);
+      
+      // 关闭文件
+      await fileIo.close(srcFile);
+      await fileIo.close(destFile);
+      
+      console.info(`[PPSSPP] File copied successfully: ${destPath}`);
+      return destPath;
+    } catch (err) {
+      console.error(`[PPSSPP] Error copying file: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 设置浏览文件夹回调函数
+   * 当 PPSSPP 需要选择文件夹（如游戏目录）时会调用此回调
+   */
+  private setupBrowseFolderCallback(): void {
+    console.info('[PPSSPP] Setting up browse folder callback');
+    
+    try {
+      const success: boolean = ppsspp.setBrowseFolderCallback(async (requestId: number): Promise<void> => {
+        console.info(`[PPSSPP] Browse folder requested, requestId: ${requestId}`);
+        
+        try {
+          // 创建文件夹选择器
+          const documentPicker = new picker.DocumentViewPicker(this.context);
+          const documentSelectOptions = new picker.DocumentSelectOptions();
+          documentSelectOptions.selectMode = picker.DocumentSelectMode.FOLDER;
+          
+          // 打开文件夹选择器
+          const documentSelectResult = await documentPicker.select(documentSelectOptions);
+          
+          if (documentSelectResult && documentSelectResult.length > 0) {
+            const selectedUri = documentSelectResult[0];
+            console.info(`[PPSSPP] Folder selected: ${selectedUri}`);
+            
+            // 文件夹路径可以直接使用（如果是沙箱内的路径）
+            // 或者需要获取持久化权限
+            ppsspp.onFolderSelected(requestId, true, selectedUri);
+          } else {
+            console.info('[PPSSPP] No folder selected (user cancelled)');
+            ppsspp.onFolderSelected(requestId, false, '');
+          }
+        } catch (err) {
+          console.error(`[PPSSPP] Error selecting folder: ${(err as Error).message}`);
+          ppsspp.onFolderSelected(requestId, false, '');
+        }
+      });
+      
+      if (success) {
+        console.info('[PPSSPP] Browse folder callback set successfully');
+      } else {
+        console.error('[PPSSPP] Failed to set browse folder callback');
+      }
+    } catch (err) {
+      console.error(`[PPSSPP] Error setting browse folder callback: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * 设置震动回调函数
    */
   private setupVibrationCallback(): void {
@@ -284,6 +471,8 @@ struct Index {
           this.setupVibrationCallback();
           this.setupOpenUrlCallback();
           this.setupBrowseImageCallback();
+          this.setupBrowseFileCallback();
+          this.setupBrowseFolderCallback();
         }, 500);
         
         this.isInitialized = true;

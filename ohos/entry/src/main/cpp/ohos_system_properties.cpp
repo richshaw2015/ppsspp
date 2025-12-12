@@ -192,6 +192,8 @@ float System_GetPropertyFloat(SystemProperty prop) {
 // 前向声明 - 来自 napi_ppsspp.cpp
 namespace NapiPPSSPP {
     bool BrowseForImage(int requestId);
+    bool BrowseForFile(int requestId, int fileType);
+    bool BrowseForFolder(int requestId);
 }
 
 // 实现 System_MakeRequest 函数
@@ -208,6 +210,17 @@ bool System_MakeRequest(
             // 调用 NAPI 层的图片选择器
             INFO_LOG(Log::System, "System_MakeRequest: BROWSE_FOR_IMAGE, requestId=%d", requestId);
             return NapiPPSSPP::BrowseForImage(requestId);
+        
+        case SystemRequestType::BROWSE_FOR_FILE:
+            // 调用 NAPI 层的文件选择器
+            // param3 包含 BrowseFileType
+            INFO_LOG(Log::System, "System_MakeRequest: BROWSE_FOR_FILE, requestId=%d, fileType=%d", requestId, (int)param3);
+            return NapiPPSSPP::BrowseForFile(requestId, (int)param3);
+        
+        case SystemRequestType::BROWSE_FOR_FOLDER:
+            // 调用 NAPI 层的文件夹选择器
+            INFO_LOG(Log::System, "System_MakeRequest: BROWSE_FOR_FOLDER, requestId=%d", requestId);
+            return NapiPPSSPP::BrowseForFolder(requestId);
         
         default:
             // 其他请求暂不实现

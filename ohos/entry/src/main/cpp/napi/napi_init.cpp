@@ -423,6 +423,10 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"setOpenUrlCallback", nullptr, NapiPPSSPP::SetOpenUrlCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setBrowseImageCallback", nullptr, NapiPPSSPP::SetBrowseImageCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"onImageSelected", nullptr, NapiPPSSPP::OnImageSelected, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setBrowseFileCallback", nullptr, NapiPPSSPP::SetBrowseFileCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"onFileSelected", nullptr, NapiPPSSPP::OnFileSelected, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setBrowseFolderCallback", nullptr, NapiPPSSPP::SetBrowseFolderCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"onFolderSelected", nullptr, NapiPPSSPP::OnFolderSelected, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     
     napi_status status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);

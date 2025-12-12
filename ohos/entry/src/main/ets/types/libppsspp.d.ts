@@ -109,6 +109,37 @@ declare namespace ppsspp {
    * @param path 选择的图片路径
    */
   function onImageSelected(requestId: number, success: boolean, path: string): boolean;
+
+  /**
+   * 设置浏览文件的回调函数
+   * 当 PPSSPP 需要选择文件（如游戏 ISO、存档等）时会调用此回调
+   * @param callback 回调函数，参数为请求 ID 和文件类型
+   * 文件类型: 0=BOOTABLE, 1=IMAGE, 2=INI, 3=DB, 4=SOUND_EFFECT, 5=ZIP, 6=SYMBOL_MAP, 7=SYMBOL_MAP_NOCASH, 8=ATRAC3, 9=ANY
+   */
+  function setBrowseFileCallback(callback: (requestId: number, fileType: number) => void): boolean;
+
+  /**
+   * 文件选择完成后的回调
+   * @param requestId 请求 ID
+   * @param success 是否成功选择
+   * @param path 选择的文件路径
+   */
+  function onFileSelected(requestId: number, success: boolean, path: string): boolean;
+
+  /**
+   * 设置浏览文件夹的回调函数
+   * 当 PPSSPP 需要选择文件夹（如游戏目录）时会调用此回调
+   * @param callback 回调函数，参数为请求 ID
+   */
+  function setBrowseFolderCallback(callback: (requestId: number) => void): boolean;
+
+  /**
+   * 文件夹选择完成后的回调
+   * @param requestId 请求 ID
+   * @param success 是否成功选择
+   * @param path 选择的文件夹路径
+   */
+  function onFolderSelected(requestId: number, success: boolean, path: string): boolean;
 }
 
 export default ppsspp;
