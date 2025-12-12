@@ -616,10 +616,11 @@ struct Index {
         console.info(`[PPSSPP] Restart app requested with params: ${params}`);
         
         // 重启应用
-        // 在 OHOS 中，我们可以通过终止当前 Ability 并重新启动来实现重启
+        // 使用 ApplicationContext.restartApp() 方法
         try {
-          // 先保存配置（PPSSPP 会在 System_RestartApp 之前调用 g_Config.Save）
-          // 然后重启
+          const applicationContext = this.context.getApplicationContext();
+          
+          // 创建 Want 对象，用于重启应用
           const want: Want = {
             bundleName: this.context.abilityInfo.bundleName,
             abilityName: this.context.abilityInfo.name,
@@ -628,19 +629,17 @@ struct Index {
             }
           };
           
-          this.context.startAbility(want).then(() => {
-            console.info('[PPSSPP] New instance started, terminating current');
-            // 启动新实例后终止当前实例
-            this.context.terminateSelf();
-          }).catch((err: Error) => {
-            console.error(`[PPSSPP] Failed to restart app: ${err.message}`);
-            promptAction.showToast({
-              message: '重启失败，请手动重启应用',
-              duration: 3000
-            });
-          });
+          console.info('[PPSSPP] Restarting app with ApplicationContext.restartApp()...');
+          
+          // 使用 ApplicationContext 的 restartApp 方法
+          applicationContext.restartApp(want);
+          console.info('[PPSSPP] App restart initiated successfully');
         } catch (err) {
-          console.error(`[PPSSPP] Error restarting app: ${(err as Error).message}`);
+          console.error(`[PPSSPP] Failed to restart app: ${JSON.stringify(err)}`);
+          promptAction.showToast({
+            message: '重启失败，请手动重启应用',
+            duration: 3000
+          });
         }
       });
       
@@ -705,7 +704,7 @@ struct Index {
         
         console.info('[PPSSPP] Resolution change will be handled dynamically without restarting');
         
-        // 可选：显示一个提示告知用户设置已生效
+        // 显示一个提示告知用户设置已生效
         promptAction.showToast({
           message: '分辨率设置已更新',
           duration: 2000
