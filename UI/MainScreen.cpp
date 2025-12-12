@@ -1197,6 +1197,8 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 	parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")))->OnClick.Handle(this, &MainScreen::OnGameSettings);
 	parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("About PPSSPP")))->OnClick.Handle(this, &MainScreen::OnCredits);
 
+	// OHOS: Comment out website and gold purchase options
+	/*
 	if (!portrait) {
 		parent->Add(new Choice(mm->T("www.ppsspp.org")))->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
 	}
@@ -1210,6 +1212,7 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 		gold->SetImageScale(0.6f);  // for the left-icon in case of vertical.
 		gold->SetShine(true);
 	}
+	*/
 
 	if (!portrait) {
 		parent->Add(new Spacer(25.0));
