@@ -913,6 +913,7 @@ add_library(Common STATIC
 	Common/LogReporting.h
 	Common/MemArenaAndroid.cpp
 	Common/MemArenaDarwin.cpp
+	Common/MemArenaOhos.cpp
 	Common/MemArenaPosix.cpp
 	Common/MemArenaWin32.cpp
 	Common/MemArenaHorizon.cpp

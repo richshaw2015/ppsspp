@@ -200,7 +200,7 @@ set(Common_Core
     ${PPSSPP_ROOT}/Common/Log/ConsoleListener.cpp
     ${PPSSPP_ROOT}/Common/Log/LogManager.cpp
     ${PPSSPP_ROOT}/Common/LogReporting.cpp
-    ${PPSSPP_ROOT}/Common/MemArenaPosix.cpp
+    ${PPSSPP_ROOT}/Common/MemArenaOhos.cpp
     ${PPSSPP_ROOT}/Common/MemoryUtil.cpp
     ${PPSSPP_ROOT}/Common/OSVersion.cpp
     ${PPSSPP_ROOT}/Common/StringUtils.cpp
