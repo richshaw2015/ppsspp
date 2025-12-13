@@ -502,7 +502,7 @@ AtlasData AtlasProvider(Draw::DrawContext *draw, AtlasChoice atlas, float dpiSca
 			WARN_LOG(Log::System, "Failed to load font_atlas.zim or asciifont_atlas.zim");
 		}
 #else
-		// Load the full font texture.
+		// Load the full font texture. for OHOS platform
 		LoadAtlasMetadata(font_atlas, "font_atlas.meta");
 		fontTexture = CreateTextureFromFile(draw, "font_atlas.zim", ImageFileType::ZIM, false);
 #endif

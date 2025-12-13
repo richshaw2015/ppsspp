@@ -660,7 +660,7 @@ Path GameBrowser::HomePath() {
 	if (!homePath_.empty()) {
 		return homePath_;
 	}
-#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(SWITCH) || defined(USING_WIN_UI) || PPSSPP_PLATFORM(UWP) || PPSSPP_PLATFORM(IOS)
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS) || PPSSPP_PLATFORM(SWITCH) || defined(USING_WIN_UI) || PPSSPP_PLATFORM(UWP) || PPSSPP_PLATFORM(IOS)
 	return g_Config.memStickDirectory;
 #else
 	return Path(getenv("HOME"));
@@ -1218,9 +1218,9 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 		parent->Add(new Spacer(25.0));
 	}
 
-#if !PPSSPP_PLATFORM(IOS_APP_STORE) && !PPSSPP_PLATFORM(ANDROID)
+#if !PPSSPP_PLATFORM(IOS_APP_STORE) && !PPSSPP_PLATFORM(ANDROID) && !PPSSPP_PLATFORM(OHOS)
 	// Officially, iOS apps should not have exit buttons. Remove it to maximize app store review chances.
-	// Additionally, the Exit button creates problems on Android.
+	// Additionally, the Exit button creates problems on Android and OHOS.
 	// Also we remove it in the vertical layout on all platforms, just no space.
 	if (!portrait) {
 		parent->Add(new Choice(mm->T("Exit"), portrait ? new LinearLayoutParams() : nullptr))->OnClick.Handle(this, &MainScreen::OnExit);

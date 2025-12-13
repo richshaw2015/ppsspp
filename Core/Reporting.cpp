@@ -311,7 +311,9 @@ namespace Reporting
 	std::string GetPlatformIdentifer()
 	{
 		// TODO: Do we care about OS version?
-#if defined(__ANDROID__)
+#if PPSSPP_PLATFORM(OHOS)
+		return "HarmonyOS";
+#elif defined(__ANDROID__)
 		return "Android";
 #elif defined(_WIN64) && defined(_M_ARM64)
 		return "Windows ARM64";

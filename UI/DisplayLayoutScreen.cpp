@@ -276,7 +276,7 @@ void DisplayLayoutScreen::CreateViews() {
 		bool supportsInsets = false;
 #if PPSSPP_PLATFORM(ANDROID)
 		supportsInsets = System_GetPropertyInt(SYSPROP_SYSTEMVERSION) >= 28;
-#elif PPSSPP_PLATFORM(IOS)
+#elif PPSSPP_PLATFORM(IOS) || PPSSPP_PLATFORM(OHOS)
 		supportsInsets = true;
 #endif
 		// Hide insets option if no insets, or OS too old.

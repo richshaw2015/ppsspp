@@ -214,7 +214,7 @@ bool MemoryMap_Setup(u32 flags) {
 	}
 #endif
 
-#if !PPSSPP_PLATFORM(ANDROID)
+#if !PPSSPP_PLATFORM(ANDROID) && !PPSSPP_PLATFORM(OHOS)
 	if (g_arena.NeedsProbing()) {
 		int base_attempts = 0;
 #if PPSSPP_PLATFORM(WINDOWS) && PPSSPP_ARCH(32BIT)

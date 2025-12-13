@@ -139,7 +139,7 @@ void SetCurrentThreadName(const char *threadName) {
 	wchar_t buffer[256];
 	ConvertUTF8ToWString(buffer, ARRAY_SIZE(buffer), threadName);
 	SetThreadDescription(GetCurrentThread(), buffer);
-#elif PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(LINUX)
+#elif PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS) || PPSSPP_PLATFORM(LINUX)
 	pthread_setname_np(pthread_self(), threadName);
 #elif defined(__APPLE__)
 	pthread_setname_np(threadName);
@@ -227,7 +227,7 @@ int GetCurrentThreadIdForDebug() {
 	uint64_t tid = 0;
 	pthread_threadid_np(NULL, &tid);
 	return (int)tid;
-#elif PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(LINUX)
+#elif PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS) || PPSSPP_PLATFORM(LINUX)
 	// See issue 14545
 	return (int)syscall(__NR_gettid);
 	// return (int)gettid();

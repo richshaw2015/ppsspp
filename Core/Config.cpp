@@ -141,7 +141,7 @@ static int DefaultDepthRaster() {
 // For 64-bit ARM and x86 with SIMD, enable depth raster.
 #if PPSSPP_ARCH(ARM64_NEON) || PPSSPP_ARCH(SSE2)
 
-#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(IOS)
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS) || PPSSPP_PLATFORM(IOS)
 	return (int)DepthRasterMode::LOW_QUALITY;
 #else
 	return (int)DepthRasterMode::DEFAULT;
@@ -194,7 +194,7 @@ static bool DefaultCodeGen() {
 }
 
 static bool DefaultEnableStateUndo() {
-#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(IOS)
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS) || PPSSPP_PLATFORM(IOS)
 	// Off on mobile to save disk space.
 	return false;
 #endif
