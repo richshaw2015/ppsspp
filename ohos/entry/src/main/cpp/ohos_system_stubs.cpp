@@ -38,14 +38,9 @@ bool IsPassthroughSupported() {
 // ============================================================================
 // System 属性函数
 // ============================================================================
-
-int64_t System_GetPropertyInt(SystemProperty prop) {
-    std::string value = System_GetProperty(prop);
-    if (value.empty()) {
-        return 0;
-    }
-    return std::stoll(value);
-}
+// 注意：System_GetProperty, System_GetPropertyInt, System_GetPropertyFloat,
+//       System_GetPropertyBool, System_GetPropertyStringVec
+//       已在 ohos_system_properties.cpp 中实现
 
 // ============================================================================
 // System 通知函数
@@ -161,13 +156,6 @@ void System_LaunchUrl(LaunchUrlType urlType, std::string_view url) {
     if (!success) {
         WARN_LOG(Log::System, "System_LaunchUrl: failed to open URL");
     }
-}
-
-std::vector<std::string> System_GetPropertyStringVec(SystemProperty prop) {
-    // 获取字符串向量属性 - 返回空向量
-    // TODO: 实现存储路径列表等
-    INFO_LOG(Log::System, "System_GetPropertyStringVec: %d (returning empty)", (int)prop);
-    return std::vector<std::string>();
 }
 
 // 前向声明 - 在 napi_ppsspp.cpp 中实现

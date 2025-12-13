@@ -78,4 +78,36 @@ void GetSafeInsets(float& left, float& top, float& right, float& bottom);
 
 } // namespace OhosSystem
 
+// ========== 系统属性初始化函数（在全局命名空间中）==========
+
+/**
+ * 初始化系统属性（从 ArkTS 层调用）
+ * @param deviceName 设备名称
+ * @param deviceBuild 系统版本字符串
+ * @param language 语言区域代码（如 "zh_CN"）
+ * @param osVersion 系统版本号
+ * @param devType 设备类型（0=手机, 1=平板, 2=电视等）
+ * @param xres 屏幕宽度（像素）
+ * @param yres 屏幕高度（像素）
+ * @param dpi 屏幕 DPI
+ * @param refreshRate 刷新率（Hz）
+ */
+extern "C" void OhosSystemProperties_Init(
+    const char* deviceName,
+    const char* deviceBuild,
+    const char* language,
+    int osVersion,
+    int devType,
+    int xres, int yres, int dpi, float refreshRate);
+
+/**
+ * 设置安全区域（从 ArkTS 层调用）
+ */
+extern "C" void OhosSystemProperties_SetSafeInsets(float left, float top, float right, float bottom);
+
+/**
+ * 设置音频配置（从 ArkTS 层调用）
+ */
+extern "C" void OhosSystemProperties_SetAudioConfig(int rate, int frames, int optRate, int optFrames);
+
 #endif // OHOS_SYSTEM_H

@@ -323,6 +323,58 @@ static napi_value LoadGame(napi_env env, napi_callback_info info) {
 }
 
 /**
+ * 初始化系统属性（参考 Android 实现）
+ * 参数：deviceName, deviceBuild, language, osVersion, devType, xres, yres, dpi, refreshRate
+ */
+static napi_value InitSystemProperties(napi_env env, napi_callback_info info) {
+    size_t argc = 9;
+    napi_value args[9];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 9) {
+        OHOS_LOGE(NAPI_TAG, "InitSystemProperties requires 9 arguments");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 获取字符串参数
+    char deviceName[256] = {0}, deviceBuild[256] = {0}, language[32] = {0};
+    size_t len;
+    napi_get_value_string_utf8(env, args[0], deviceName, sizeof(deviceName), &len);
+    napi_get_value_string_utf8(env, args[1], deviceBuild, sizeof(deviceBuild), &len);
+    napi_get_value_string_utf8(env, args[2], language, sizeof(language), &len);
+    
+    // 获取整数参数
+    int32_t osVersion, devType, xres, yres, dpi;
+    napi_get_value_int32(env, args[3], &osVersion);
+    napi_get_value_int32(env, args[4], &devType);
+    napi_get_value_int32(env, args[5], &xres);
+    napi_get_value_int32(env, args[6], &yres);
+    napi_get_value_int32(env, args[7], &dpi);
+    
+    // 获取浮点参数
+    double refreshRate;
+    napi_get_value_double(env, args[8], &refreshRate);
+    
+    OHOS_LOGI(NAPI_TAG, "Initializing system properties:");
+    OHOS_LOGI(NAPI_TAG, "  Device: %{public}s (%{public}s)", deviceName, deviceBuild);
+    OHOS_LOGI(NAPI_TAG, "  Language: %{public}s, OS Version: %{public}d, Device Type: %{public}d", language, osVersion, devType);
+    OHOS_LOGI(NAPI_TAG, "  Display: %{public}dx%{public}d @%{public}dDPI %.1fHz", xres, yres, dpi, refreshRate);
+    
+    // 调用 C++ 初始化函数
+    OhosSystemProperties_Init(
+        deviceName, deviceBuild, language,
+        osVersion, devType,
+        xres, yres, dpi, (float)refreshRate
+    );
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+/**
  * 设置安全区域 insets
  * 参数：left, top, right, bottom (number)
  */
@@ -346,8 +398,39 @@ static napi_value SetSafeInsets(napi_env env, napi_callback_info info) {
     OHOS_LOGI(NAPI_TAG, "Setting safe insets: left=%{public}.1f, top=%{public}.1f, right=%{public}.1f, bottom=%{public}.1f",
               left, top, right, bottom);
     
-    // 设置安全区域
+    // 设置安全区域（同时调用两个函数）
     OhosSystem::SetSafeInsets((float)left, (float)top, (float)right, (float)bottom);
+    OhosSystemProperties_SetSafeInsets((float)left, (float)top, (float)right, (float)bottom);
+    
+    return nullptr;
+}
+
+/**
+ * 设置音频配置
+ * 参数：sampleRate, framesPerBuffer, optimalSampleRate, optimalFramesPerBuffer
+ */
+static napi_value SetAudioConfig(napi_env env, napi_callback_info info) {
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 4) {
+        OHOS_LOGE(NAPI_TAG, "SetAudioConfig requires 4 arguments");
+        return nullptr;
+    }
+    
+    // 获取参数
+    int32_t rate, frames, optRate, optFrames;
+    napi_get_value_int32(env, args[0], &rate);
+    napi_get_value_int32(env, args[1], &frames);
+    napi_get_value_int32(env, args[2], &optRate);
+    napi_get_value_int32(env, args[3], &optFrames);
+    
+    OHOS_LOGI(NAPI_TAG, "Setting audio config: %{public}dHz %{public}d frames (optimal: %{public}dHz %{public}d frames)",
+              rate, frames, optRate, optFrames);
+    
+    // 调用 C++ 设置函数
+    OhosSystemProperties_SetAudioConfig(rate, frames, optRate, optFrames);
     
     return nullptr;
 }
@@ -433,7 +516,9 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"initEmulator", nullptr, InitEmulator, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"shutdownEmulator", nullptr, ShutdownEmulator, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"loadGame", nullptr, LoadGame, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"initSystemProperties", nullptr, InitSystemProperties, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setSafeInsets", nullptr, SetSafeInsets, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"setAudioConfig", nullptr, SetAudioConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sendTouchEvent", nullptr, SendTouchEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sendKeyEvent", nullptr, NapiPPSSPP::SendKeyEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sendAxisEvent", nullptr, NapiPPSSPP::SendAxisEvent, nullptr, nullptr, nullptr, napi_default, nullptr},
