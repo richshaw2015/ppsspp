@@ -215,12 +215,17 @@ void OnSurfaceCreated(OH_NativeXComponent* component, void* window) {
         return;
     }
     
-    // 设置显示参数 - 这是 UI 渲染的关键！
-    int dpi = 360;
+    // 设置显示参数 - 使用系统属性中的 DPI
+    // 参考 Android 的计算方式：dpi_scale = (1.0f / display_scale) * (240.0f / display_dpi)
+    // 在 OHOS 中，surface 大小就是 display 大小，所以 display_scale = 1.0
+    int dpi = System_GetPropertyInt(SYSPROP_DISPLAY_DPI);
+    if (dpi <= 0) {
+        dpi = 420;  // 默认高 DPI（移动设备通常是 400-600）
+    }
     float dpi_scale_x = 240.0f / (float)dpi;
     float dpi_scale_y = 240.0f / (float)dpi;
     
-    OHOS_LOGI(XCOMP_TAG, "Setting display params: dpi=%{public}d, scale=%{public}.2f", dpi, dpi_scale_x);
+    OHOS_LOGI(XCOMP_TAG, "Setting display params: dpi=%{public}d, scale=%{public}.3f", dpi, dpi_scale_x);
     
     // 调用 g_display.Recalculate 设置显示参数
     OHOS_LOGI(XCOMP_TAG, "Getting UIScaleFactorToMultiplier...");

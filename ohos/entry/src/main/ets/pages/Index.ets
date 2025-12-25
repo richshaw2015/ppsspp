@@ -4,11 +4,12 @@ import common from '@ohos.app.ability.common';
 import windowManager from '@ohos.window';
 import vibrator from '@ohos.vibrator';
 import pasteboard from '@ohos.pasteboard';
-import { promptAction } from '@kit.ArkUI';
+import { promptAction, display } from '@kit.ArkUI';
 import { Want } from '@kit.AbilityKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { picker } from '@kit.CoreFileKit';
+import { deviceInfo } from '@kit.BasicServicesKit';
 
 @Entry
 @Component
@@ -24,6 +25,66 @@ struct Index {
   @State inputDialogTitle: string = '';
   @State inputDialogText: string = '';
   private inputDialogRequestId: number = 0;
+
+  /**
+   * 初始化系统属性
+   * 从 HarmonyOS 系统获取设备信息并传递给 C++ 层
+   */
+  private initSystemProperties(): void {
+    try {
+      // 1. 获取设备信息
+      const deviceName: string = deviceInfo.productModel || "HarmonyOS Device";
+      const deviceBuild: string = `HarmonyOS ${deviceInfo.osFullName || "NEXT"}`;
+      const osVersion: number = parseInt(deviceInfo.sdkApiVersion.toString()) || 5;
+      
+      console.info(`[PPSSPP] Device: ${deviceName}`);
+      console.info(`[PPSSPP] Build: ${deviceBuild}`);
+      console.info(`[PPSSPP] OS Version: ${osVersion}`);
+      
+      // 2. 获取语言设置
+      const systemLanguage: string = this.context.config.language || "zh";
+      const systemRegion: string = systemLanguage === "zh" ? "CN" : "US";
+      const langRegion: string = `${systemLanguage}_${systemRegion}`;
+      
+      console.info(`[PPSSPP] Language: ${langRegion}`);
+      
+      // 3. 获取显示信息
+      const displayClass = display.getDefaultDisplaySync();
+      const xres: number = displayClass.width;
+      const yres: number = displayClass.height;
+      const dpi: number = displayClass.densityDPI;
+      const refreshRate: number = displayClass.refreshRate || 60;
+      
+      console.info(`[PPSSPP] Display: ${xres}x${yres} @${dpi}DPI ${refreshRate}Hz`);
+      
+      // 4. 设备类型判断
+      let devType: number = 0;  // 0=手机
+      if (deviceInfo.deviceType === 'tablet') {
+        devType = 1;  // 平板
+      } else if (deviceInfo.deviceType === 'tv') {
+        devType = 2;  // 电视
+      }
+      
+      console.info(`[PPSSPP] Device Type: ${devType}`);
+      
+      // 5. 调用 C++ 初始化函数
+      ppsspp.initSystemProperties(
+        deviceName,
+        deviceBuild,
+        langRegion,
+        osVersion,
+        devType,
+        xres,
+        yres,
+        dpi,
+        refreshRate
+      );
+      
+      console.info('[PPSSPP] System properties initialized successfully');
+    } catch (err) {
+      console.error(`[PPSSPP] Failed to initialize system properties: ${(err as Error).message}`);
+    }
+  }
 
   /**
    * 检查震动权限和设备支持
@@ -881,6 +942,9 @@ struct Index {
       );
       
       if (success) {
+        // 初始化系统属性（DPI、设备类型等）- 必须在 initEmulator 之后调用
+        this.initSystemProperties();
+        
 				// 圆角屏幕的最小安全边距（像素）
 				const MIN_CORNER_INSET = 40;
 
