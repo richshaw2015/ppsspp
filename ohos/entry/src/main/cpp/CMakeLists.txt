@@ -98,6 +98,7 @@ target_link_libraries(ppsspp_ohos
     EGL
     GLESv3
     native_window
+    native_buffer
     native_drawing
     rawfile.z
     ohaudio
@@ -481,6 +482,15 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/common_sources.cmake)
 # 创建 Common 静态库
 add_library(Common STATIC ${COMMON_SOURCES})
 
+# Common 库需要 OHOS 宏定义，否则 GLFeatures.cpp 等文件无法正确识别平台
+target_compile_definitions(Common PRIVATE
+    OHOS=1
+    __OHOS__=1
+    MOBILE_DEVICE=1
+    USING_GLES2=1
+    USING_EGL=1
+)
+
 target_include_directories(Common PUBLIC
     ${PPSSPP_ROOT}
     ${PPSSPP_ROOT}/Common
@@ -538,6 +548,15 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/core_sources.cmake)
 
 # 创建 Core 静态库
 add_library(Core STATIC ${CORE_SOURCES})
+
+# Core 库需要 OHOS 宏定义
+target_compile_definitions(Core PRIVATE
+    OHOS=1
+    __OHOS__=1
+    MOBILE_DEVICE=1
+    USING_GLES2=1
+    USING_EGL=1
+)
 
 target_include_directories(Core PUBLIC
     ${PPSSPP_ROOT}

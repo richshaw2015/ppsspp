@@ -251,22 +251,8 @@ bool Initialize() {
     OHOS_LOGI(APP_TAG, "Vulkan available: %{public}s", VulkanMayBeAvailable() ? "YES" : "NO");
     OHOS_LOGI(APP_TAG, "=== End Configuration ===");
     
-    // 5. 初始化 PPSSPP Core
-    // NativeInit 会初始化音频系统（通过 AudioBackend）
-    OHOS_LOGI(APP_TAG, "Calling NativeInit...");
-    
-    // 获取目录路径
-    std::string dataDir = OhosSystem::GetDataDirectory();
-    std::string cacheDir = OhosSystem::GetCacheDirectory();
-    
-    OHOS_LOGI(APP_TAG, "Data dir: %{public}s", dataDir.c_str());
-    OHOS_LOGI(APP_TAG, "Cache dir: %{public}s", cacheDir.c_str());
-    
-    // 准备参数
-    const char *argv[] = {"ppsspp"};
-    NativeInit(1, argv, dataDir.c_str(), dataDir.c_str(), cacheDir.c_str());
-    
-    OHOS_LOGI(APP_TAG, "NativeInit completed");
+    // 注意：NativeInit 已经在 napi_init.cpp 的 InitEmulator 中调用了
+    // 这里不需要再调用，否则会导致重复初始化问题
     
     // 注意：不要在这里强制设置 g_Config.bHapticFeedback = true
     // 这会覆盖用户保存的设置。PPSSPP 的配置系统会自动处理默认值和保存/加载。

@@ -47,7 +47,9 @@ extern "C" {
  * otherwise. */
 GLboolean gl3stubInit();
 
-#if !PPSSPP_PLATFORM(IOS)
+// iOS 和 OHOS 平台直接链接 GLES3 库，不需要类型定义、常量和函数指针声明
+// 这些已经在系统头文件 <GLES3/gl3.h> 中提供
+#if !PPSSPP_PLATFORM(IOS) && !PPSSPP_PLATFORM(OHOS)
     
 /*-------------------------------------------------------------------------
  * Data type definitions
@@ -514,7 +516,10 @@ extern GL_APICALL void           (* GL_APIENTRY glBufferStorageEXT) (GLenum targ
 /* OES_copy_image, etc. */
 extern GL_APICALL void           (* GL_APIENTRY glCopyImageSubDataOES) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei width, GLsizei height, GLsizei depth);
 
-#endif   // PPSSPP_PLATFORM(IOS)
+#endif   // !PPSSPP_PLATFORM(IOS) && !PPSSPP_PLATFORM(OHOS)
+
+// 注意：对于 iOS 和 OHOS 平台，扩展函数（如 glBindFragDataLocationIndexedEXT）
+// 不在此处声明。如果需要使用这些扩展，应该在运行时通过 eglGetProcAddress 获取。
 
 #ifdef __cplusplus
 }

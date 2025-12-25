@@ -427,8 +427,9 @@ void RenderLoop() {
         
         // OpenGL 需要调用 ThreadStart，Vulkan 不需要
         if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
-            OHOS_LOGI(XCOMP_TAG, "Calling ThreadStart...");
+            OHOS_LOGI(XCOMP_TAG, "Calling ThreadStart for OpenGL...");
             g_glContext->ThreadStart();
+            OHOS_LOGI(XCOMP_TAG, "ThreadStart completed");
         }
         g_rendererInited = true;
         OHOS_LOGI(XCOMP_TAG, "Renderer initialized, entering main loop");
@@ -442,22 +443,75 @@ void RenderLoop() {
         
         // 主渲染循环
         int frameNum = 0;
+        OHOS_LOGI(XCOMP_TAG, "Starting main render loop...");
+        
+        // 记录上一帧的时间，用于检测卡顿
+        double lastFrameLogTime = time_now_d();
+        int lastLoggedFrame = 0;
+        
         while (!g_exitRenderLoop.load()) {
             double frameStartTime = time_now_d();
             
-            // 每 100 帧输出一次日志
-//            if (frameNum % 100 == 0) {
-//                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d", frameNum);
-//            }
-            frameNum++;
+            // 前几帧、每100帧、或者超过2秒没有日志时输出
+            bool shouldLog = (frameNum < 10) || (frameNum % 100 == 0) || 
+                             (frameStartTime - lastFrameLogTime > 2.0);
             
-            // 渲染一帧
+            if (shouldLog) {
+                double timeSinceLastLog = frameStartTime - lastFrameLogTime;
+                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: START (frames since last log: %{public}d, time: %{public}.2fs)", 
+                          frameNum, frameNum - lastLoggedFrame, timeSinceLastLog);
+                lastFrameLogTime = frameStartTime;
+                lastLoggedFrame = frameNum;
+            }
+            
+            // 渲染一帧 - 这会生成渲染命令并推送到队列
+            if (shouldLog) {
+                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: calling NativeFrame...", frameNum);
+            }
+            
+            double nativeFrameStart = time_now_d();
             NativeFrame(ctx);
+            double nativeFrameTime = time_now_d() - nativeFrameStart;
+            
+            // 如果 NativeFrame 耗时超过 100ms，记录警告
+            if (nativeFrameTime > 0.1) {
+                OHOS_LOGW(XCOMP_TAG, "Frame %{public}d: NativeFrame took %{public}.3fs (SLOW!)", frameNum, nativeFrameTime);
+            } else if (shouldLog) {
+                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: NativeFrame completed in %{public}.3fs", frameNum, nativeFrameTime);
+            }
             
             // 处理渲染线程任务（仅 OpenGL 需要）
+            // ThreadFrame 会从队列中取出任务并执行，包括 swap
             if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
-                g_glContext->ThreadFrame(true);
+                if (shouldLog) {
+                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: About to call ThreadFrame...", frameNum);
+                }
+                
+                // 在单线程模式下，我们需要处理所有排队的任务直到完成一帧
+                // ThreadFrame(true) 会阻塞直到处理完一个 PRESENT 任务
+                double threadFrameStart = time_now_d();
+                
+                // 循环处理所有任务，直到完成一个 PRESENT
+                // 这是必要的，因为 NativeFrame 可能推送了多个任务
+                bool result = g_glContext->ThreadFrame(true);
+                
+                double threadFrameTime = time_now_d() - threadFrameStart;
+                
+                // 如果 ThreadFrame 耗时超过 100ms，记录警告
+                if (threadFrameTime > 0.1) {
+                    OHOS_LOGW(XCOMP_TAG, "Frame %{public}d: ThreadFrame took %{public}.3fs (SLOW!), result=%{public}d", 
+                              frameNum, threadFrameTime, result);
+                } else if (shouldLog) {
+                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: ThreadFrame returned %{public}d in %{public}.3fs", 
+                              frameNum, result, threadFrameTime);
+                }
             }
+            
+            if (shouldLog) {
+                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: END", frameNum);
+            }
+            
+            frameNum++;
             
             // 更新帧统计
             g_frameCount.fetch_add(1);

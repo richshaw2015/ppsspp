@@ -14,6 +14,17 @@
 /**
  * OpenGL ES 上下文实现
  * 参考 AndroidJavaEGLGraphicsContext
+ * 
+ * 注意：OHOS 使用单线程模式，与 Android 的双线程模式不同。
+ * Android 有两个线程：
+ * 1. EmuThread - 运行 NativeFrame，生成渲染命令
+ * 2. AndroidRender (Java GL 线程) - 调用 ThreadFrame，执行渲染命令
+ * 
+ * OHOS 只有一个线程，所以需要在 NativeFrame 之后立即调用 ThreadFrame。
+ * 但是 NativeFrame 内部的 CopyDisplayToOutput 会调用 FlushSync，
+ * 这会等待 ThreadFrame 处理队列，导致死锁。
+ * 
+ * 解决方案：使用 Poll() 方法定期处理队列，避免死锁。
  */
 class OhosGLContext : public OhosGraphicsContext {
 public:
@@ -40,7 +51,13 @@ public:
     void SetNativeWindow(void* window);
     void OnSurfaceChanged(int width, int height);
     
+    // 单线程模式下的队列处理
+    // 在 NativeFrame 期间定期调用，避免队列满导致死锁
+    void Poll() override;
+    
     GraphicsContextState GetState() const override { return state_; }
+    
+    GLRenderManager* GetRenderManager() { return renderManager_; }
     
 private:
     bool InitEGL();

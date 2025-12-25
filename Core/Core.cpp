@@ -22,6 +22,11 @@
 #include <set>
 #include <condition_variable>
 
+#if PPSSPP_PLATFORM(OHOS)
+#include "../ohos/entry/src/main/cpp/ohos_hilog.h"
+#define CORE_LOG_TAG "PPSSPP_Core"
+#endif
+
 #include "Common/System/System.h"
 #include "Common/Profiler/Profiler.h"
 
@@ -204,11 +209,35 @@ bool Core_GetPowerSaving() {
 }
 
 void Core_RunLoopUntil(u64 globalticks) {
+#if PPSSPP_PLATFORM(OHOS)
+	static int loopCount = 0;
+	static double lastLogTime = 0.0;
+	double startTime = time_now_d();
+	bool shouldLog = (loopCount < 20) || (loopCount % 500 == 0) || (startTime - lastLogTime > 5.0);
+	if (shouldLog) {
+		OHOS_LOGI(CORE_LOG_TAG, "Core_RunLoopUntil #%{public}d, coreState=%{public}d", loopCount, (int)coreState);
+		lastLogTime = startTime;
+	}
+	loopCount++;
+	int iterations = 0;
+#endif
 	while (true) {
+#if PPSSPP_PLATFORM(OHOS)
+		iterations++;
+		if (iterations > 10000) {
+			OHOS_LOGW(CORE_LOG_TAG, "Core_RunLoopUntil: too many iterations (%{public}d), coreState=%{public}d, breaking", iterations, (int)coreState);
+			break;
+		}
+#endif
 		switch (coreState) {
 		case CORE_POWERDOWN:
 		case CORE_RUNTIME_ERROR:
 		case CORE_NEXTFRAME:
+#if PPSSPP_PLATFORM(OHOS)
+			if (shouldLog) {
+				OHOS_LOGI(CORE_LOG_TAG, "Core_RunLoopUntil: exit with coreState=%{public}d after %{public}d iterations", (int)coreState, iterations);
+			}
+#endif
 			return;
 		case CORE_STEPPING_CPU:
 		case CORE_STEPPING_GE:

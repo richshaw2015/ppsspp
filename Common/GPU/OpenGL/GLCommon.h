@@ -5,6 +5,13 @@
 #if PPSSPP_PLATFORM(IOS)
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
+#elif PPSSPP_PLATFORM(OHOS)
+// 鸿蒙系统直接使用 GLES3 头文件（支持 OpenGL ES 3.2）
+#include <GLES3/gl3.h>
+#include <GLES3/gl31.h>
+#include <GLES3/gl32.h>
+#include <GLES2/gl2ext.h>
+#define GL_BGRA_EXT 0x80E1
 #elif defined(USING_GLES2)
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -21,6 +28,8 @@
 #ifdef USING_GLES2
 // Support OpenGL ES 3.0
 // This uses the "DYNAMIC" approach from the gles3jni NDK sample.
+// For iOS and OHOS, gl3stub.h only provides gl3stubInit() declaration
+// since these platforms link directly to GLES3 libraries.
 #include "Common/GPU/OpenGL/gl3stub.h"
 #endif
 

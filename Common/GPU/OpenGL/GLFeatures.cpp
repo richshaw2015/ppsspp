@@ -475,6 +475,19 @@ bool CheckGLExtensions() {
 		eglGetSystemTimeNV = (PFNEGLGETSYSTEMTIMENVPROC)eglGetProcAddress("eglGetSystemTimeNV");
 		eglGetSystemTimeFrequencyNV = (PFNEGLGETSYSTEMTIMEFREQUENCYNVPROC)eglGetProcAddress("eglGetSystemTimeFrequencyNV");
 	}
+#elif PPSSPP_PLATFORM(OHOS)
+	// OHOS: 使用 eglGetCurrentDisplay() 获取当前线程绑定的 display
+	// 注意：必须在 EGL context 已经 make current 之后调用
+	EGLDisplay display = eglGetCurrentDisplay();
+	if (display != EGL_NO_DISPLAY) {
+		const char *eglString = eglQueryString(display, EGL_EXTENSIONS);
+		g_all_egl_extensions = eglString ? eglString : "";
+		ParseExtensionsString(g_all_egl_extensions, g_set_egl_extensions);
+	} else {
+		// 如果没有当前 display，跳过 EGL 扩展查询
+		// 这不是错误，只是意味着我们无法查询 EGL 扩展
+		g_all_egl_extensions = "";
+	}
 #elif defined(USING_GLES2) && defined(__linux__)
 	const char *eglString = eglQueryString(NULL, EGL_EXTENSIONS);
 	g_all_egl_extensions = eglString ? eglString : "";

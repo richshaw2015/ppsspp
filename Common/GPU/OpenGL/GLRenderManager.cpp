@@ -534,6 +534,23 @@ bool GLRenderManager::Run(GLRRenderThreadTask &task) {
 }
 
 void GLRenderManager::FlushSync() {
+#if PPSSPP_PLATFORM(OHOS)
+	// On OHOS, we use single-thread mode. The render thread and the main thread are the same.
+	// If we push a task to the queue and wait for it, we'll deadlock because ThreadFrame
+	// is only called after NativeFrame returns, but FlushSync is called inside NativeFrame.
+	// So we need to execute the task directly here.
+	VLOG("PUSH: Frame[%d] FlushSync (single-thread mode)", curFrame_);
+	
+	GLRRenderThreadTask task(GLRRunType::SYNC);
+	task.frame = curFrame_;
+	task.initSteps = std::move(initSteps_);
+	task.steps = std::move(steps_);
+	initSteps_.clear();
+	steps_.clear();
+	
+	// Execute the task directly
+	Run(task);
+#else
 	{
 		VLOG("PUSH: Frame[%d].readyForRun = true (sync)", curFrame_);
 
@@ -557,4 +574,5 @@ void GLRenderManager::FlushSync() {
 		}
 		syncDone_ = false;
 	}
+#endif
 }

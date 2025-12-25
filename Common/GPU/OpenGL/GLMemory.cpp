@@ -28,7 +28,7 @@ void *GLRBuffer::Map(GLBufferStrategy strategy) {
 		glBindBuffer(target_, buffer_);
 
 		if (gl_extensions.ARB_buffer_storage || gl_extensions.EXT_buffer_storage) {
-#if !PPSSPP_PLATFORM(IOS)
+#if !PPSSPP_PLATFORM(IOS) && !PPSSPP_PLATFORM(OHOS)
 			if (!hasStorage_) {
 				GLbitfield storageFlags = access & ~(GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
 #ifdef USING_GLES2

@@ -21,6 +21,20 @@
 
 #include <android/log.h>
 
+#elif PPSSPP_PLATFORM(OHOS)
+
+// OHOS HiLog - 直接声明函数避免与 PPSSPP LogLevel 冲突
+extern "C" {
+#define OHOS_LOG_DEBUG 3
+#define OHOS_LOG_INFO  4
+#define OHOS_LOG_WARN  5
+#define OHOS_LOG_ERROR 6
+#define OHOS_LOG_APP 0
+#define OHOS_LOG_DOMAIN 0x0001
+int OH_LOG_Print(int type, int level, unsigned int domain, const char *tag, const char *fmt, ...)
+    __attribute__((__format__(printf, 5, 6)));
+}
+
 #endif
 
 #include <algorithm>
@@ -57,8 +71,8 @@ static const char level_to_char[8] = "-NEWIDV";
 #define LOG_MSC_OUTPUTDEBUG false
 #endif
 
-#if PPSSPP_PLATFORM(ANDROID)
-void AndroidLog(const LogMessage &message);
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS)
+void MobileLog(const LogMessage &message);
 #endif
 
 void GenericLog(Log type, LogLevel level, const char *file, int line, const char* fmt, ...) {
@@ -421,6 +435,50 @@ void LogManager::StdioLog(const LogMessage &message) {
 		}
 		// Print the final part.
 		__android_log_print(mode, LOG_APP_NAME, "%.*s", (int)msg.size(), msg.data());
+	}
+#elif PPSSPP_PLATFORM(OHOS)
+#ifndef LOG_APP_NAME
+#define LOG_APP_NAME "PPSSPP"
+#endif
+	int mode;
+	switch (message.level) {
+	case LogLevel::LWARNING:
+		mode = OHOS_LOG_WARN;
+		break;
+	case LogLevel::LERROR:
+		mode = OHOS_LOG_ERROR;
+		break;
+	case LogLevel::LDEBUG:
+	case LogLevel::LVERBOSE:
+		mode = OHOS_LOG_DEBUG;
+		break;
+	default:
+		mode = OHOS_LOG_INFO;
+		break;
+	}
+
+	// Long log messages need splitting up.
+	const size_t maxLogLength = 512;
+	if (message.msg.length() < maxLogLength) {
+		// Log with simplified headers as OHOS already provides timestamp etc.
+		// Note: Use %{public}s to make strings visible in OHOS logs
+		OH_LOG_Print(OHOS_LOG_APP, mode, OHOS_LOG_DOMAIN, LOG_APP_NAME, "[%{public}s] %{public}s", message.log, message.msg.c_str());
+	} else {
+		std::string_view msg = message.msg;
+
+		// Split long messages
+		std::string first_part(msg.substr(0, maxLogLength));
+		OH_LOG_Print(OHOS_LOG_APP, mode, OHOS_LOG_DOMAIN, LOG_APP_NAME, "[%{public}s] %{public}s", message.log, first_part.c_str());
+		msg = msg.substr(maxLogLength);
+
+		while (msg.length() > maxLogLength) {
+			std::string next_part(msg.substr(0, maxLogLength));
+			OH_LOG_Print(OHOS_LOG_APP, mode, OHOS_LOG_DOMAIN, LOG_APP_NAME, "%{public}s", next_part.c_str());
+			msg = msg.substr(maxLogLength);
+		}
+		// Print the final part.
+		std::string final_part(msg);
+		OH_LOG_Print(OHOS_LOG_APP, mode, OHOS_LOG_DOMAIN, LOG_APP_NAME, "%{public}s", final_part.c_str());
 	}
 #else
 	char text[2048];

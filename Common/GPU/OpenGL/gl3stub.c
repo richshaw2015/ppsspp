@@ -19,7 +19,9 @@
 #include "Common/GPU/OpenGL/GLCommon.h"
 
 #if defined(USING_GLES2)
-#if !PPSSPP_PLATFORM(IOS)
+#if !PPSSPP_PLATFORM(IOS) && !PPSSPP_PLATFORM(OHOS)
+// 鸿蒙系统直接链接 GLESv3 库，不需要动态加载函数指针
+// iOS 也不需要动态加载
 #include "EGL/egl.h"
 
 GLboolean gl3stubInit() {
@@ -145,6 +147,8 @@ GLboolean gl3stubInit() {
 
     #undef FIND_PROC
 
+    // 检查核心函数是否加载成功
+    // 注意：某些扩展函数可能不可用，这是正常的
     if (!glReadBuffer ||
         !glDrawRangeElements ||
         !glTexImage3D ||
@@ -256,7 +260,7 @@ GLboolean gl3stubInit() {
     return GL_TRUE;
 }
 
-/* Function pointer definitions */
+/* Function pointer definitions - 仅在非 iOS/OHOS 平台定义 */
 GL_APICALL void           (* GL_APIENTRY glReadBuffer) (GLenum mode);
 GL_APICALL void           (* GL_APIENTRY glDrawRangeElements) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid* indices);
 GL_APICALL void           (* GL_APIENTRY glTexImage3D) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid* pixels);
@@ -376,13 +380,23 @@ GL_APICALL void           (* GL_APIENTRY glBufferStorageEXT) (GLenum target, GLs
 /* OES_copy_image, etc. */
 GL_APICALL void           (* GL_APIENTRY glCopyImageSubDataOES) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei width, GLsizei height, GLsizei depth);
 
-#else
+#endif // !PPSSPP_PLATFORM(IOS) && !PPSSPP_PLATFORM(OHOS)
+
+#if PPSSPP_PLATFORM(IOS) || PPSSPP_PLATFORM(OHOS)
+// iOS 和 OHOS 平台不需要动态加载 GL ES 3.0 函数
+// iOS: 系统框架直接提供所有函数
+// OHOS: 直接链接 GLESv3 库，核心函数已提供
+//
+// 注意：扩展函数（如 glBindFragDataLocationIndexedEXT）在这些平台上
+// 可能不可用或需要特殊处理。目前我们不加载它们，如果需要可以
+// 在运行时通过 eglGetProcAddress 按需获取。
 
 GLboolean gl3stubInit() {
-	return GL_TRUE;
+    // 对于 iOS 和 OHOS，不需要加载任何函数
+    // GL ES 3.0 核心函数已通过系统库提供
+    return GL_TRUE;
 }
-
-#endif // PPSPP_PLATFORM(IOS)
+#endif // PPSSPP_PLATFORM(IOS) || PPSSPP_PLATFORM(OHOS)
 
 #endif // GLES2
 
