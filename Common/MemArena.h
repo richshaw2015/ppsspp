@@ -19,6 +19,8 @@
 
 #include <cstdint>
 
+#include "ppsspp_config.h"
+
 #ifdef _WIN32
 #include "CommonWindows.h"
 #elif defined(__APPLE__)
@@ -32,6 +34,11 @@
 // memory mirrors.
 
 struct MemArenaData;
+
+// OHOS 平台需要设置缓存目录用于临时文件回退
+#if PPSSPP_PLATFORM(OHOS)
+void MemArena_SetCacheDir(const char *cacheDir);
+#endif
 
 class MemArena {
 public:

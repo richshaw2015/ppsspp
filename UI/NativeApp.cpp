@@ -408,6 +408,11 @@ void NativeInit(int argc, const char *argv[], const char *savegame_dir, const ch
 	// HarmonyOS / OpenHarmony 平台配置
 	INFO_LOG(Log::System, "OHOS platform initialization");
 	
+	// 设置缓存目录用于内存映射回退
+	if (cache_dir && strlen(cache_dir)) {
+		MemArena_SetCacheDir(cache_dir);
+	}
+	
 	// 类似 Android，使用应用沙箱目录
 	g_Config.memStickDirectory = Path(savegame_dir);
 	g_Config.defaultCurrentDirectory = Path(savegame_dir);

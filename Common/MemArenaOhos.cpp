@@ -22,10 +22,30 @@
 
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <sys/syscall.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
+#include <cstdio>
+#include <string>
+
+// memfd_create flags - 定义以防头文件不可用
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
+#endif
+
+#ifndef __NR_memfd_create
+#if defined(__aarch64__)
+#define __NR_memfd_create 279
+#elif defined(__arm__)
+#define __NR_memfd_create 385
+#elif defined(__x86_64__)
+#define __NR_memfd_create 319
+#elif defined(__i386__)
+#define __NR_memfd_create 356
+#endif
+#endif
 
 #include "Common/Log.h"
 #include "Common/MemoryUtil.h"
@@ -33,7 +53,18 @@
 #include "Common/StringUtils.h"
 
 // HarmonyOS 内存分配实现
-// 参考 Android 的 ashmem 机制，但使用标准的 POSIX 匿名内存映射
+// 使用 memfd_create 创建匿名文件描述符，支持内存镜像
+// 这是 Linux 3.17+ 的特性，OHOS 基于 Linux 内核应该支持
+
+// memfd_create 系统调用包装
+static int memfd_create_wrapper(const char *name, unsigned int flags) {
+#ifdef __NR_memfd_create
+	return syscall(__NR_memfd_create, name, flags);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+}
 
 bool MemArena::NeedsProbing() {
 	return false;
@@ -44,46 +75,95 @@ size_t MemArena::roundup(size_t x) {
 	return x;
 }
 
+// 全局变量用于存储应用缓存目录（由 OhosSystem 设置）
+static std::string g_ohosAppCacheDir;
+
+void MemArena_SetCacheDir(const char *cacheDir) {
+	if (cacheDir) {
+		g_ohosAppCacheDir = cacheDir;
+		INFO_LOG(Log::MemMap, "HarmonyOS: Cache dir set to: %s", cacheDir);
+	}
+}
+
 bool MemArena::GrabMemSpace(size_t size) {
-	// HarmonyOS 使用匿名内存映射（类似 Android 的 ashmem）
-	// 不需要创建文件描述符，直接使用 MAP_ANONYMOUS
+	// 方法 1: 尝试使用 memfd_create（推荐，无需文件系统）
+	fd = memfd_create_wrapper("ppsspp_mem", MFD_CLOEXEC);
 	
-	// 注意：我们不在这里实际分配内存，只是标记大小
-	// 实际的内存映射在 CreateView 中完成
+	if (fd >= 0) {
+		INFO_LOG(Log::MemMap, "HarmonyOS: Created memfd successfully (fd=%d)", fd);
+	} else {
+		// 方法 2: 回退到临时文件
+		WARN_LOG(Log::MemMap, "HarmonyOS: memfd_create failed (errno=%d: %s), falling back to tmpfile", errno, strerror(errno));
+		
+		// 尝试多个位置
+		const char* tmpDirs[] = {
+			g_ohosAppCacheDir.c_str(),  // 应用缓存目录（首选）
+			"/data/local/tmp",           // 系统临时目录
+			"/tmp",                       // 标准临时目录
+			nullptr
+		};
+		
+		char tmpPath[512];
+		for (int i = 0; tmpDirs[i] != nullptr; i++) {
+			if (tmpDirs[i][0] == '\0') continue;  // 跳过空字符串
+			
+			snprintf(tmpPath, sizeof(tmpPath), "%s/ppsspp_mem_%d", tmpDirs[i], getpid());
+			
+			fd = open(tmpPath, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+			if (fd >= 0) {
+				// 立即删除文件，但保持 fd 有效
+				unlink(tmpPath);
+				INFO_LOG(Log::MemMap, "HarmonyOS: Created temp file at %s (fd=%d)", tmpPath, fd);
+				break;
+			} else {
+				WARN_LOG(Log::MemMap, "HarmonyOS: Failed to create temp file at %s: %s", tmpPath, strerror(errno));
+			}
+		}
+		
+		if (fd < 0) {
+			ERROR_LOG(Log::MemMap, "HarmonyOS: All temp file methods failed");
+			return false;
+		}
+	}
 	
-	// 为了兼容性，我们创建一个虚拟的 fd（-1 表示匿名映射）
-	fd = -1;
+	// 设置文件大小
+	if (ftruncate(fd, size) != 0) {
+		ERROR_LOG(Log::MemMap, "HarmonyOS: ftruncate failed: %s", strerror(errno));
+		close(fd);
+		fd = -1;
+		return false;
+	}
 	
-	INFO_LOG(Log::MemMap, "HarmonyOS: Prepared anonymous memory space of size: %08x", (int)size);
+	INFO_LOG(Log::MemMap, "HarmonyOS: Memory space allocated, size=%08x, fd=%d", (int)size, fd);
 	return true;
 }
 
 void MemArena::ReleaseSpace() {
-	// 匿名映射不需要关闭文件描述符
-	fd = -1;
+	if (fd >= 0) {
+		close(fd);
+		fd = -1;
+	}
 }
 
 void *MemArena::CreateView(s64 offset, size_t size, void *base) {
-	// HarmonyOS 使用匿名内存映射
-	// MAP_ANONYMOUS: 不需要文件支持的匿名映射
-	// MAP_SHARED: 允许多个映射共享同一内存（用于镜像）
-	// MAP_FIXED: 如果指定了 base，则固定在该地址
+	// 使用 fd 和 offset 映射共享内存的视图
+	// 这样多个视图可以映射到同一块物理内存（内存镜像）
 	
-	int flags = MAP_ANONYMOUS | MAP_SHARED;
+	int flags = MAP_SHARED;
 	if (base != nullptr) {
 		flags |= MAP_FIXED;
 	}
 	
-	void *retval = mmap(base, size, PROT_READ | PROT_WRITE, flags, -1, 0);
+	void *retval = mmap(base, size, PROT_READ | PROT_WRITE, flags, fd, offset);
 	
 	if (retval == MAP_FAILED) {
-		ERROR_LOG(Log::MemMap, "HarmonyOS mmap failed: base=%p, size=%08x, errno=%d (%s)", 
-		          base, (int)size, errno, strerror(errno));
+		ERROR_LOG(Log::MemMap, "HarmonyOS mmap failed: base=%p, size=%08x, offset=%llx, fd=%d, errno=%d (%s)", 
+		          base, (int)size, (long long)offset, fd, errno, strerror(errno));
 		return nullptr;
 	}
 	
-	INFO_LOG(Log::MemMap, "HarmonyOS: Created memory view at %p (requested: %p), size: %08x", 
-	         retval, base, (int)size);
+	INFO_LOG(Log::MemMap, "HarmonyOS: Created memory view at %p (requested: %p), size: %08x, offset: %llx", 
+	         retval, base, (int)size, (long long)offset);
 	
 	return retval;
 }
