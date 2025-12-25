@@ -239,7 +239,7 @@ static const ConfigSetting generalSettings[] = {
 	ConfigSetting("Language", SETTING(g_Config, sLanguageIni), &DefaultLangRegion, CfgFlag::DEFAULT),
 	ConfigSetting("ForceLagSync2", SETTING(g_Config, bForceLagSync), false, CfgFlag::PER_GAME),
 	ConfigSetting("DiscordRichPresence", SETTING(g_Config, bDiscordRichPresence), false, CfgFlag::DEFAULT),
-	ConfigSetting("UISound", SETTING(g_Config, bUISound), false, CfgFlag::DEFAULT),
+	ConfigSetting("UISound", SETTING(g_Config, bUISound), true, CfgFlag::DEFAULT),
 
 	ConfigSetting("DisableHTTPS", SETTING(g_Config, bDisableHTTPS), false, CfgFlag::DONT_SAVE),
 	ConfigSetting("AutoLoadSaveState", SETTING(g_Config, iAutoLoadSaveState), 0, CfgFlag::PER_GAME),
@@ -933,7 +933,7 @@ static const ConfigSetting touchControlSettings[] = {
 };
 
 static const ConfigSetting controlSettings[] = {
-	ConfigSetting("HapticFeedback", SETTING(g_Config, bHapticFeedback), false, CfgFlag::PER_GAME),
+	ConfigSetting("HapticFeedback", SETTING(g_Config, bHapticFeedback), true, CfgFlag::PER_GAME),
 	
 #if defined(USING_WIN_UI)
 	ConfigSetting("IgnoreWindowsKey", SETTING(g_Config, bIgnoreWindowsKey), false, CfgFlag::PER_GAME),
