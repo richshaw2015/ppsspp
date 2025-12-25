@@ -29,11 +29,6 @@
 #include <sys/time.h>
 #endif
 
-#if PPSSPP_PLATFORM(OHOS)
-#include "../ohos/entry/src/main/cpp/ohos_hilog.h"
-#define DISPLAY_LOG_TAG "PPSSPP_sceDisplay"
-#endif
-
 #include "Common/Data/Text/I18n.h"
 #include "Common/Profiler/Profiler.h"
 #include "Common/System/System.h"
@@ -648,41 +643,16 @@ void __DisplayFlip(int cyclesLate) {
 
 	bool nextFrame = false;
 
-#if PPSSPP_PLATFORM(OHOS)
-	static int vblankCount = 0;
-	static double lastLogTime = 0.0;
-	double currentTime = time_now_d();
-	bool shouldLog = (vblankCount < 30) || (vblankCount % 300 == 0) || (currentTime - lastLogTime > 5.0);
-	if (shouldLog) {
-		OHOS_LOGI(DISPLAY_LOG_TAG, "VBlank #%{public}d: fbReallyDirty=%{public}d, noRecentFlip=%{public}d, forceNoFlip=%{public}d", 
-		          vblankCount, fbReallyDirty ? 1 : 0, noRecentFlip ? 1 : 0, forceNoFlip ? 1 : 0);
-		lastLogTime = currentTime;
-	}
-	vblankCount++;
-#endif
-
 	if (fbReallyDirty || noRecentFlip || postEffectRequiresFlip) {
 		// Check first though, might've just quit / been paused.
 		if (!forceNoFlip) {
 			nextFrame = Core_NextFrame();
-#if PPSSPP_PLATFORM(OHOS)
-			if (shouldLog) {
-				OHOS_LOGI(DISPLAY_LOG_TAG, "Core_NextFrame returned %{public}d", nextFrame ? 1 : 0);
-			}
-#endif
 			if (!nextFrame) {
 				WARN_LOG(Log::sceDisplay, "Core_NextFrame returned false");
 			}
 		}
 		if (nextFrame) {
-#if PPSSPP_PLATFORM(OHOS)
-			// 强制输出日志，不管 shouldLog 的值
-			OHOS_LOGI(DISPLAY_LOG_TAG, "VBlank #%{public}d: Calling gpu->CopyDisplayToOutput...", vblankCount - 1);
-#endif
 			gpu->CopyDisplayToOutput(g_displayLayoutConfigCached, fbReallyDirty);
-#if PPSSPP_PLATFORM(OHOS)
-			OHOS_LOGI(DISPLAY_LOG_TAG, "VBlank #%{public}d: CopyDisplayToOutput done", vblankCount - 1);
-#endif
 			if (fbReallyDirty) {
 				DisplayFireActualFlip();
 			}

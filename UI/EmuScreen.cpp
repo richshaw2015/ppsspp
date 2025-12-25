@@ -21,11 +21,6 @@
 
 using namespace std::placeholders;
 
-#if PPSSPP_PLATFORM(OHOS)
-#include "../ohos/entry/src/main/cpp/ohos_hilog.h"
-#define EMU_LOG_TAG "PPSSPP_EmuScreen"
-#endif
-
 #include "Common/Render/TextureAtlas.h"
 #include "Common/GPU/OpenGL/GLFeatures.h"
 #include "Common/File/FileUtil.h"
@@ -1589,20 +1584,6 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 	// Moved from update, because we want it to be possible for booting to happen even when the screen
 	// is in the background, like when choosing Reset from the pause menu.
 
-#if PPSSPP_PLATFORM(OHOS)
-	static int renderCount = 0;
-	static double lastLogTime = 0.0;
-	double currentTime = time_now_d();
-	// 在游戏运行时，每 60 帧输出一次日志
-	bool shouldLog = (renderCount < 20) || (renderCount % 60 == 0) || (currentTime - lastLogTime > 2.0);
-	if (shouldLog) {
-		OHOS_LOGI(EMU_LOG_TAG, "EmuScreen::render #%{public}d, mode=%{public}d, PSP_IsInited=%{public}d, coreState=%{public}d", 
-		          renderCount, (int)mode, PSP_IsInited() ? 1 : 0, (int)coreState);
-		lastLogTime = currentTime;
-	}
-	renderCount++;
-#endif
-
 	// If a boot is in progress, update it.
 	ProcessGameBoot(gamePath_);
 
@@ -1740,20 +1721,7 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 				draw->BindFramebufferAsRenderTarget(nullptr, { RPAction::CLEAR, RPAction::CLEAR, RPAction::CLEAR, clearColor }, "EmuScreen_SavestateRebind");
 			}
 		}
-		
-#if PPSSPP_PLATFORM(OHOS)
-		double runLoopStart = time_now_d();
-		if (shouldLog) {
-			OHOS_LOGI(EMU_LOG_TAG, "Calling PSP_RunLoopWhileState, coreState=%{public}d", (int)coreState);
-		}
-#endif
 		PSP_RunLoopWhileState();
-#if PPSSPP_PLATFORM(OHOS)
-		double runLoopTime = time_now_d() - runLoopStart;
-		if (runLoopTime > 0.1 || shouldLog) {
-			OHOS_LOGI(EMU_LOG_TAG, "PSP_RunLoopWhileState took %{public}.3fs, coreState now=%{public}d", runLoopTime, (int)coreState);
-		}
-#endif
 
 		// Hopefully, after running, coreState is now CORE_NEXTFRAME
 		switch (coreState) {
@@ -1761,19 +1729,11 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 			// Reached the end of the frame while running at full blast, all good. Set back to running for the next frame
 			coreState = frameStep_ ? CORE_STEPPING_CPU : CORE_RUNNING_CPU;
 			flags |= ScreenRenderFlags::HANDLED_THROTTLING;
-#if PPSSPP_PLATFORM(OHOS)
-			if (shouldLog) {
-				OHOS_LOGI(EMU_LOG_TAG, "CORE_NEXTFRAME: coreState reset to %{public}d", (int)coreState);
-			}
-#endif
 			break;
 		case CORE_STEPPING_CPU:
 		case CORE_STEPPING_GE:
 		case CORE_RUNTIME_ERROR:
 		{
-#if PPSSPP_PLATFORM(OHOS)
-			OHOS_LOGI(EMU_LOG_TAG, "CORE_STEPPING/ERROR: coreState=%{public}d", (int)coreState);
-#endif
 			// If there's an exception, display information.
 			const MIPSExceptionInfo &info = Core_GetExceptionInfo();
 			if (info.type != MIPSExceptionType::NONE) {
@@ -1795,9 +1755,6 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 			break;
 		}
 		default:
-#if PPSSPP_PLATFORM(OHOS)
-			OHOS_LOGI(EMU_LOG_TAG, "default case: coreState=%{public}d", (int)coreState);
-#endif
 			// Didn't actually reach the end of the frame, ran out of the blockTicks cycles.
 			// In this case we need to bind and wipe the backbuffer, at least.
 			// It's possible we never ended up outputted anything - make sure we have the backbuffer cleared
@@ -1808,11 +1765,6 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 			break;
 		}
 
-#if PPSSPP_PLATFORM(OHOS)
-		if (shouldLog) {
-			OHOS_LOGI(EMU_LOG_TAG, "About to call gpu->EndHostFrame, gpu=%{public}p", (void*)gpu);
-		}
-#endif
 		if (gpu) {
 			gpu->EndHostFrame();
 		}
@@ -1840,27 +1792,11 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 		}
 	}
 
-#if PPSSPP_PLATFORM(OHOS)
-	bool gpuPresented = gpu && gpu->PresentedThisFrame();
-	if (shouldLog) {
-		OHOS_LOGI(EMU_LOG_TAG, "gpu->PresentedThisFrame()=%{public}d, framebufferBound=%{public}d", 
-		          gpuPresented ? 1 : 0, framebufferBound ? 1 : 0);
-	}
-	if (gpuPresented) {
-		framebufferBound = true;
-	}
-#else
 	if (gpu && gpu->PresentedThisFrame()) {
 		framebufferBound = true;
 	}
-#endif
 
 	if (!framebufferBound) {
-#if PPSSPP_PLATFORM(OHOS)
-		if (shouldLog) {
-			OHOS_LOGI(EMU_LOG_TAG, "Binding backbuffer (EmuScreen_NoFrame)");
-		}
-#endif
 		draw->BindFramebufferAsRenderTarget(nullptr, { RPAction::CLEAR, RPAction::CLEAR, RPAction::CLEAR, clearColor }, "EmuScreen_NoFrame");
 		draw->SetViewport(viewport);
 		draw->SetScissorRect(0, 0, g_display.pixel_xres, g_display.pixel_yres);
@@ -1908,11 +1844,6 @@ ScreenRenderFlags EmuScreen::render(ScreenRenderMode mode) {
 	}
 
 	renderImDebugger();
-#if PPSSPP_PLATFORM(OHOS)
-	if (shouldLog) {
-		OHOS_LOGI(EMU_LOG_TAG, "EmuScreen::render END, flags=%{public}d", (int)flags);
-	}
-#endif
 	return flags;
 }
 

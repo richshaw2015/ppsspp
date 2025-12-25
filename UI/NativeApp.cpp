@@ -29,12 +29,6 @@
 // in NativeShutdown.
 #include <errno.h>
 
-#if defined(OHOS) || defined(__OHOS__)
-// 包含鸿蒙 HiLog 包装器（避免 LogLevel 冲突）
-#include "../ohos/entry/src/main/cpp/ohos_hilog.h"
-#define OHOS_LOG_TAG "PPSSPP_NativeApp"
-#endif
-
 #include <clocale>
 #include <algorithm>
 #include <cstdlib>
@@ -1083,18 +1077,6 @@ static void SendMouseDeltaAxis();
 void NativeFrame(GraphicsContext *graphicsContext) {
 	PROFILE_END_FRAME();
 
-#if defined(OHOS) || defined(__OHOS__)
-	static int frameCount = 0;
-	static double lastLogTime = 0.0;
-	double frameStartTime = time_now_d();
-	// 在游戏运行时（frameCount > 1000），每 60 帧输出一次日志
-	bool shouldLog = (frameCount < 20) || (frameCount % 60 == 0) || (frameStartTime - lastLogTime > 2.0);
-	if (shouldLog) {
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d START, UIState=%{public}d", frameCount, (int)GetUIState());
-		lastLogTime = frameStartTime;
-	}
-#endif
-
 	if (System_GetPropertyInt(SYSPROP_DEVICE_TYPE) == DEVICE_TYPE_DESKTOP) {
 		if (g_windowHidden && g_Config.bPauseWhenMinimized) {
 			sleep_ms(16, "window-hidden");
@@ -1195,19 +1177,7 @@ void NativeFrame(GraphicsContext *graphicsContext) {
 	// Can be overridden by sceDisplay which may pass true for the second argument.
 	g_frameTiming.ComputePresentMode(g_draw, false);
 
-#if defined(OHOS) || defined(__OHOS__)
-	if (shouldLog) {
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d: About to call BeginFrame...", frameCount);
-	}
-#endif
-
 	g_draw->BeginFrame(debugFlags);
-
-#if defined(OHOS) || defined(__OHOS__)
-	if (shouldLog) {
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d: BeginFrame done, calling render...", frameCount);
-	}
-#endif
 
 	ui_draw2d.PushDrawMatrix(ortho);
 
@@ -1216,12 +1186,6 @@ void NativeFrame(GraphicsContext *graphicsContext) {
 	// All actual rendering happen in here.
 	ScreenRenderFlags renderFlags = g_screenManager->render();
 
-#if defined(OHOS) || defined(__OHOS__)
-	if (shouldLog) {
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d: render done, flags=%{public}d", frameCount, (int)renderFlags);
-	}
-#endif
-
 	if (g_screenManager->getUIContext()->Text()) {
 		g_screenManager->getUIContext()->Text()->OncePerFrame();
 	}
@@ -1229,12 +1193,6 @@ void NativeFrame(GraphicsContext *graphicsContext) {
 	ui_draw2d.PopDrawMatrix();
 
 	g_draw->EndFrame();
-
-#if defined(OHOS) || defined(__OHOS__)
-	if (shouldLog) {
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d: EndFrame done, calling Present...", frameCount);
-	}
-#endif;
 
 	// This, between EndFrame and Present, is where we should actually wait to do present time management.
 	// There might not be a meaningful distinction here for all backends..
@@ -1246,14 +1204,6 @@ void NativeFrame(GraphicsContext *graphicsContext) {
 	}
 
 	g_draw->Present(g_frameTiming.PresentMode());
-
-#if defined(OHOS) || defined(__OHOS__)
-	if (shouldLog) {
-		double frameTime = time_now_d() - frameStartTime;
-		OHOS_LOGI(OHOS_LOG_TAG, "NativeFrame #%{public}d: Present done, total time=%{public}.3fs", frameCount, frameTime);
-	}
-	frameCount++;
-#endif
 
 	if (resized) {
 		INFO_LOG(Log::G3D, "Resized flag set - recalculating bounds");

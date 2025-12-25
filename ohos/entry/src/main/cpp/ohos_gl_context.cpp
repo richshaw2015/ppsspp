@@ -390,24 +390,6 @@ bool OhosGLContext::InitEGL() {
         return false;
     }
     
-    // 8. 测试 OpenGL 渲染 - 绘制一个红色帧来验证渲染管线
-    INFO_LOG(Log::G3D, "Testing OpenGL rendering with red clear...");
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);  // 红色
-    glClear(GL_COLOR_BUFFER_BIT);
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        ERROR_LOG(Log::G3D, "glClear failed with error: 0x%x", err);
-    }
-    
-    // 立即 swap 来显示红色帧
-    EGLBoolean swapResult = eglSwapBuffers(display_, surface_);
-    if (swapResult != EGL_TRUE) {
-        EGLint swapError = eglGetError();
-        ERROR_LOG(Log::G3D, "Test eglSwapBuffers failed: 0x%x", swapError);
-    } else {
-        INFO_LOG(Log::G3D, "Test eglSwapBuffers succeeded - you should see a red screen briefly");
-    }
-    
     return true;
 }
 
