@@ -282,16 +282,57 @@ napi_value Vibrate(napi_env env, napi_callback_info info) {
     return result;
 }
 
-// 全局变量保存 ArkTS 回调函数
-static napi_env g_vibrationEnv = nullptr;
-static napi_ref g_vibrationCallbackRef = nullptr;
+// ============================================================================
+// 震动功能 - 使用线程安全函数
+// ============================================================================
+
+// 线程安全函数，用于从任意线程调用 ArkTS 震动回调
+static napi_threadsafe_function g_vibrationTsFunc = nullptr;
+
+// 线程安全函数的调用回调 - 在主线程执行
+static void VibrationCallJs(napi_env env, napi_value js_callback, void* context, void* data) {
+    if (env == nullptr || js_callback == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "VibrationCallJs: invalid env or callback");
+        if (data) {
+            delete static_cast<int*>(data);
+        }
+        return;
+    }
+    
+    int* durationPtr = static_cast<int*>(data);
+    if (durationPtr == nullptr) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "VibrationCallJs: duration is null");
+        return;
+    }
+    
+    int duration = *durationPtr;
+    delete durationPtr;
+    
+    // 创建参数
+    napi_value args[1];
+    napi_status status = napi_create_int32(env, duration, &args[0]);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "VibrationCallJs: failed to create duration arg");
+        return;
+    }
+    
+    // 调用回调函数
+    napi_value result;
+    status = napi_call_function(env, nullptr, js_callback, 1, args, &result);
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "VibrationCallJs: failed to call callback function, status=%{public}d", status);
+    }
+}
 
 napi_value SetVibrationCallback(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "SetVibrationCallback called");
+    
     size_t argc = 1;
     napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
     if (argc < 1) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetVibrationCallback: missing callback argument");
         napi_value result;
         napi_get_boolean(env, false, &result);
         return result;
@@ -301,57 +342,64 @@ napi_value SetVibrationCallback(napi_env env, napi_callback_info info) {
     napi_valuetype valueType;
     napi_typeof(env, args[0], &valueType);
     if (valueType != napi_function) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetVibrationCallback: argument is not a function");
         napi_value result;
         napi_get_boolean(env, false, &result);
         return result;
     }
     
-    // 清理之前的回调引用
-    if (g_vibrationCallbackRef != nullptr) {
-        napi_delete_reference(g_vibrationEnv, g_vibrationCallbackRef);
-        g_vibrationCallbackRef = nullptr;
+    // 清理之前的线程安全函数
+    if (g_vibrationTsFunc != nullptr) {
+        napi_release_threadsafe_function(g_vibrationTsFunc, napi_tsfn_release);
+        g_vibrationTsFunc = nullptr;
     }
     
-    // 保存新的回调函数引用
-    g_vibrationEnv = env;
-    napi_create_reference(env, args[0], 1, &g_vibrationCallbackRef);
+    // 创建资源名称
+    napi_value resourceName;
+    napi_create_string_utf8(env, "VibrationCallback", NAPI_AUTO_LENGTH, &resourceName);
     
-    // 设置 C++ 层的回调函数
-    OhosVibration::SetVibrationCallback([](int duration) -> bool {
-        if (g_vibrationEnv == nullptr || g_vibrationCallbackRef == nullptr) {
-            return false;
-        }
-        
-        // 获取回调函数
-        napi_value callback;
-        napi_status status = napi_get_reference_value(g_vibrationEnv, g_vibrationCallbackRef, &callback);
-        if (status != napi_ok) {
-            return false;
-        }
-        
-        // 创建参数
-        napi_value args[1];
-        status = napi_create_int32(g_vibrationEnv, duration, &args[0]);
-        if (status != napi_ok) {
-            return false;
-        }
-        
-        // 调用回调函数
+    // 创建线程安全函数
+    napi_status status = napi_create_threadsafe_function(
+        env,
+        args[0],              // JS 回调函数
+        nullptr,              // async_resource
+        resourceName,         // async_resource_name
+        0,                    // max_queue_size (0 = 无限制)
+        1,                    // initial_thread_count
+        nullptr,              // thread_finalize_data
+        nullptr,              // thread_finalize_cb
+        nullptr,              // context
+        VibrationCallJs,      // call_js_cb
+        &g_vibrationTsFunc    // result
+    );
+    
+    if (status != napi_ok) {
+        OHOS_LOGE(NAPI_PPSSPP_TAG, "SetVibrationCallback: failed to create threadsafe function, status=%{public}d", status);
         napi_value result;
-        status = napi_call_function(g_vibrationEnv, nullptr, callback, 1, args, &result);
-        if (status != napi_ok) {
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 设置 C++ 层的回调函数 - 使用线程安全方式调用
+    OhosVibration::SetVibrationCallback([](int duration) -> bool {
+        if (g_vibrationTsFunc == nullptr) {
             return false;
         }
         
-        // 获取返回值
-        bool success = false;
-        status = napi_get_value_bool(g_vibrationEnv, result, &success);
+        // 复制 duration，因为需要传递给主线程
+        int* durationCopy = new int(duration);
+        
+        // 调用线程安全函数，将请求发送到主线程
+        napi_status status = napi_call_threadsafe_function(g_vibrationTsFunc, durationCopy, napi_tsfn_nonblocking);
         if (status != napi_ok) {
+            delete durationCopy;
             return false;
         }
         
-        return success;
+        return true;
     });
+    
+    OHOS_LOGI(NAPI_PPSSPP_TAG, "Vibration threadsafe callback registered successfully");
     
     napi_value result;
     napi_get_boolean(env, true, &result);
