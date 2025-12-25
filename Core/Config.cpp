@@ -509,6 +509,10 @@ static int DefaultGPUBackend() {
 
 #elif PPSSPP_PLATFORM(IOS_APP_STORE)
 	return (int)GPUBackend::VULKAN;
+#elif PPSSPP_PLATFORM(OHOS)
+	// OHOS: Default to Vulkan for better multi-threading support
+	// OpenGL on OHOS uses single-thread mode which can cause issues
+	return (int)GPUBackend::VULKAN;
 #endif
 
 	// TODO: On some additional Linux platforms, we should also default to Vulkan.

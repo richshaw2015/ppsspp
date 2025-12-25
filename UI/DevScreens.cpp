@@ -680,6 +680,10 @@ void TouchTestScreen::CreateViews() {
 		renderingBackendChoice->HideChoice((int)GPUBackend::DIRECT3D11);
 	if (!g_Config.IsBackendEnabled(GPUBackend::VULKAN))
 		renderingBackendChoice->HideChoice((int)GPUBackend::VULKAN);
+#if PPSSPP_PLATFORM(OHOS)
+	// OHOS only supports Vulkan for now (OpenGL uses single-thread mode which has issues)
+	renderingBackendChoice->HideChoice((int)GPUBackend::OPENGL);
+#endif
 #endif
 
 #if PPSSPP_PLATFORM(ANDROID)

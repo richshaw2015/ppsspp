@@ -133,17 +133,9 @@ static bool InitializeXComponent(OH_NativeXComponent* component, const char* sou
     }
     
     // 根据配置选择图形后端
-    // 注意：此时 g_Config 可能还未加载，所以先使用 OpenGL
-    // 实际的后端切换会在用户更改设置后通过重启应用来实现
-    OhosXComponent::GraphicsBackend backend = OhosXComponent::GraphicsBackend::OPENGL;
-    
-    // 如果配置已加载，检查用户选择的后端
-    if (g_Config.iGPUBackend == (int)GPUBackend::VULKAN) {
-        OHOS_LOGI(NAPI_TAG, "User selected Vulkan backend");
-        backend = OhosXComponent::GraphicsBackend::VULKAN;
-    } else {
-        OHOS_LOGI(NAPI_TAG, "Using OpenGL backend (config: %{public}d)", g_Config.iGPUBackend);
-    }
+    // OHOS 只支持 Vulkan（OpenGL 使用单线程模式，存在问题）
+    OhosXComponent::GraphicsBackend backend = OhosXComponent::GraphicsBackend::VULKAN;
+    OHOS_LOGI(NAPI_TAG, "Using Vulkan backend (OHOS only supports Vulkan)");
     
     // 初始化 XComponent
     OHOS_LOGI(NAPI_TAG, "Initializing XComponent with backend: %{public}s", 

@@ -329,6 +329,10 @@ void GameSettingsScreen::CreateGraphicsSettings(UI::ViewGroup *graphicsSettings)
 			choice->HideChoice((int)GPUBackend::DIRECT3D11);
 		if (!g_Config.IsBackendEnabled(GPUBackend::VULKAN))
 			choice->HideChoice((int)GPUBackend::VULKAN);
+#if PPSSPP_PLATFORM(OHOS)
+		// OHOS only supports Vulkan for now (OpenGL uses single-thread mode which has issues)
+		choice->HideChoice((int)GPUBackend::OPENGL);
+#endif
 	});
 
 	if (!IsFirstInstance()) {
