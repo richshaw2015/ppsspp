@@ -1260,7 +1260,10 @@ void MainScreen::CreateViews() {
 	Button *focusButton = nullptr;
 	if (hasStorageAccess) {
 		CreateBrowserTab(Path(g_Config.currentDirectory), "Games", "How to get games", getGamesUri, BrowseFlags::STANDARD, &g_Config.bGridView2, &g_Config.fGameListScrollPosition);
+#if !PPSSPP_PLATFORM(OHOS)
+		// Temporarily disabled on OHOS platform
 		CreateBrowserTab(GetSysDirectory(DIRECTORY_GAME), "Homebrew & Demos", "How to get homebrew & demos", getHomebrewUri, BrowseFlags::HOMEBREW_STORE, &g_Config.bGridView3, &g_Config.fHomebrewScrollPosition);
+#endif
 
 		if (g_Config.bRemoteTab && !g_Config.sLastRemoteISOServer.empty()) {
 			Path remotePath(FormatRemoteISOUrl(g_Config.sLastRemoteISOServer.c_str(), g_Config.iLastRemoteISOPort, RemoteSubdir().c_str()));
