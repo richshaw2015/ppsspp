@@ -797,7 +797,7 @@ void GameBrowser::Refresh() {
 			if (System_GetPropertyBool(SYSPROP_HAS_ADDITIONAL_STORAGE)) {
 				topBar->Add(new Choice(ImageID("I_SDCARD"), new LayoutParams(WRAP_CONTENT, 64.0f)))->OnClick.Handle(this, &GameBrowser::StorageClick);
 			}
-#if PPSSPP_PLATFORM(IOS_APP_STORE)
+#if PPSSPP_PLATFORM(IOS_APP_STORE) || PPSSPP_PLATFORM(OHOS)
 			// Don't show a browse button, not meaningful to browse outside the documents folder it seems,
 			// as we can't list things like document folders of another app, as far as I can tell.
 			// However, we do show a Load.. button for picking individual files, that seems to work.
