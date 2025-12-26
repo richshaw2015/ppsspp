@@ -214,11 +214,13 @@ bool System_GetPropertyBool(SystemProperty prop) {
     switch (prop) {
         // 文件浏览器相关
         case SYSPROP_HAS_FILE_BROWSER:
+		case SYSPROP_HAS_IMAGE_BROWSER:
+			return true;
+		
         case SYSPROP_HAS_FOLDER_BROWSER:
-        case SYSPROP_HAS_IMAGE_BROWSER:
         case SYSPROP_HAS_OPEN_DIRECTORY:
         case SYSPROP_CAN_SHOW_FILE:
-            return true;
+            return false;
         
         // 输入相关
         case SYSPROP_HAS_BACK_BUTTON:
