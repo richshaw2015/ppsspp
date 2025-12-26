@@ -268,7 +268,7 @@ struct Index {
           let suffixFilters: string[] = [];
           switch (fileType) {
             case 0: // BOOTABLE - 游戏文件
-              suffixFilters = ['.iso', '.cso', '.pbp', '.elf', '.prx', '.bin'];
+              suffixFilters = ['.iso', '.cso', '.chd', '.pbp', '.elf', '.prx', '.bin', '.zip'];
               break;
             case 1: // IMAGE
               suffixFilters = ['.png', '.jpg', '.jpeg', '.bmp'];
@@ -301,7 +301,10 @@ struct Index {
           const documentPicker = new picker.DocumentViewPicker(this.context);
           const documentSelectOptions = new picker.DocumentSelectOptions();
           documentSelectOptions.maxSelectNumber = 1;
-          // 注意：OHOS 的 DocumentViewPicker 可能不支持后缀过滤，这里仅作记录
+          // 设置文件后缀过滤（仅当不是 ANY 类型时）
+          if (suffixFilters.length > 0 && suffixFilters[0] !== '*') {
+            documentSelectOptions.fileSuffixFilters = suffixFilters;
+          }
           
           // 打开文件选择器
           const documentSelectResult = await documentPicker.select(documentSelectOptions);
