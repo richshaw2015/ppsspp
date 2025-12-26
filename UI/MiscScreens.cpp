@@ -619,7 +619,11 @@ void CreditsScroller::Draw(UIContext &dc) {
 	specialthankssolarmystic += ')';
 
 	std::string_view credits[] = {
+#if PPSSPP_PLATFORM(OHOS)
+		"PSP模拟器",
+#else
 		System_GetPropertyBool(SYSPROP_APP_GOLD) ? "PPSSPP Gold" : "PPSSPP",
+#endif
 		"",
 		cr->T("title", "A fast and portable PSP emulator"),
 		"",

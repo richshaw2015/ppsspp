@@ -1154,7 +1154,11 @@ UI::ViewGroup *MainScreen::CreateLogoView(bool portrait, UI::LayoutParams *layou
 	} else {
 		logos->Add(new ImageView(ImageID("I_ICON"), "", IS_DEFAULT, new AnchorLayoutParams(64, 64, 0, 0, NONE, NONE)));
 	}
+#if PPSSPP_PLATFORM(OHOS)
+	logos->Add(new ImageView(ImageID("I_LOGO"), "PSP模拟器", IS_DEFAULT, new AnchorLayoutParams(180, 64, 68, 2, NONE, NONE)));
+#else
 	logos->Add(new ImageView(ImageID("I_LOGO"), "PPSSPP", IS_DEFAULT, new AnchorLayoutParams(180, 64, 68, 2, NONE, NONE)));
+#endif
 
 	std::string versionString = PPSSPP_GIT_VERSION;
 	// Strip the 'v' from the displayed version, and shorten the commit hash.
