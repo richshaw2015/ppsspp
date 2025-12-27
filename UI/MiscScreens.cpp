@@ -548,16 +548,16 @@ void CreditsScreen::CreateDialogViews(UI::ViewGroup *parent) {
 	}
 
 	right->Add(new Choice(cr->T("Privacy Policy"), ImageID("I_LINK_OUT")))->OnClick.Add([](UI::EventParams &e) {
-		System_LaunchUrl(LaunchUrlType::BROWSER_URL, "https://www.ppsspp.org/privacy");
+		System_LaunchUrl(LaunchUrlType::BROWSER_URL, "https://agreement-drcn.hispace.dbankcloud.cn/index.html?lang=zh&agreementId=1849973518112944512");
 	});
 	right->Add(new Choice(cr->T("User Agreement"), ImageID("I_LINK_OUT")))->OnClick.Add([](UI::EventParams &e) {
-		System_LaunchUrl(LaunchUrlType::BROWSER_URL, "https://www.ppsspp.org/terms");
+		System_LaunchUrl(LaunchUrlType::BROWSER_URL, "https://www.superedu.app/agreement/psp");
 	});
 
 	if (System_GetPropertyBool(SYSPROP_SUPPORTS_SHARE_TEXT)) {
 		right->Add(new Choice(cr->T("Share PPSSPP"), ImageID("I_SHARE")))->OnClick.Add([](UI::EventParams &e) {
 			auto cr = GetI18NCategory(I18NCat::PSPCREDITS);
-			System_ShareText(cr->T("CheckOutPPSSPP", "Check out PPSSPP, the awesome PSP emulator: https://www.ppsspp.org/"));
+			System_ShareText(cr->T("CheckOutPPSSPP", "https://appgallery.huawei.com/app/detail?id=app.superedu.psp&channelId=SHARE&source=appshare"));
 		});
 	}
 }
