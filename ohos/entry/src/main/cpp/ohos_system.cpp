@@ -19,6 +19,7 @@
 
 #include "ohos_system.h"
 #include "ohos_hilog.h"  // 使用自定义的 hilog 包装器，避免 LogLevel 冲突
+#include "Common/System/System.h"  // for System_GetProperty and SYSPROP_* constants
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -112,13 +113,13 @@ bool CreateDirectory(const std::string& path) {
 }
 
 std::string GetSystemLanguage() {
-    // TODO: 从鸿蒙系统获取语言设置
-    return "zh-CN";
+    // 从鸿蒙系统获取语言设置
+    return System_GetProperty(SYSPROP_LANGREGION);
 }
 
 std::string GetDeviceModel() {
-    // TODO: 从鸿蒙系统获取设备型号
-    return "HarmonyOS Device";
+    // 从鸿蒙系统获取设备型号
+    return System_GetProperty(SYSPROP_NAME);
 }
 
 void SetSafeInsets(float left, float top, float right, float bottom) {

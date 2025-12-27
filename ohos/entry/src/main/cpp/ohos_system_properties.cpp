@@ -65,6 +65,7 @@ void OhosSystemProperties_Init(
     const char* deviceName,
     const char* deviceBuild,
     const char* language,
+    const char* boardNameParam,
     int osVersion,
     int devType,
     int xres, int yres, int dpi, float refreshRate) {
@@ -72,6 +73,7 @@ void OhosSystemProperties_Init(
     if (deviceName) systemName = deviceName;
     if (deviceBuild) systemBuild = deviceBuild;
     if (language) langRegion = language;
+    if (boardNameParam) boardName = boardNameParam;
     
     systemVersion = osVersion;
     deviceType = devType;
@@ -85,6 +87,7 @@ void OhosSystemProperties_Init(
     INFO_LOG(Log::System, "OHOS System Properties Initialized:");
     INFO_LOG(Log::System, "  Device: %s (%s)", systemName.c_str(), systemBuild.c_str());
     INFO_LOG(Log::System, "  Language: %s", langRegion.c_str());
+    INFO_LOG(Log::System, "  Board: %s", boardName.c_str());
     INFO_LOG(Log::System, "  OS Version: %d, Device Type: %d", systemVersion, deviceType);
     INFO_LOG(Log::System, "  Display: %dx%d @%dDPI %.1fHz", display_xres, display_yres, display_dpi, display_refresh_rate);
 }

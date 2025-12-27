@@ -331,47 +331,49 @@ static napi_value LoadGame(napi_env env, napi_callback_info info) {
 
 /**
  * 初始化系统属性（参考 Android 实现）
- * 参数：deviceName, deviceBuild, language, osVersion, devType, xres, yres, dpi, refreshRate
+ * 参数：deviceName, deviceBuild, language, boardName, osVersion, devType, xres, yres, dpi, refreshRate
  */
 static napi_value InitSystemProperties(napi_env env, napi_callback_info info) {
-    size_t argc = 9;
-    napi_value args[9];
+    size_t argc = 10;
+    napi_value args[10];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     
-    if (argc < 9) {
-        OHOS_LOGE(NAPI_TAG, "InitSystemProperties requires 9 arguments");
+    if (argc < 10) {
+        OHOS_LOGE(NAPI_TAG, "InitSystemProperties requires 10 arguments");
         napi_value result;
         napi_get_boolean(env, false, &result);
         return result;
     }
     
     // 获取字符串参数
-    char deviceName[256] = {0}, deviceBuild[256] = {0}, language[32] = {0};
+    char deviceName[256] = {0}, deviceBuild[256] = {0}, language[32] = {0}, boardName[256] = {0};
     size_t len;
     napi_get_value_string_utf8(env, args[0], deviceName, sizeof(deviceName), &len);
     napi_get_value_string_utf8(env, args[1], deviceBuild, sizeof(deviceBuild), &len);
     napi_get_value_string_utf8(env, args[2], language, sizeof(language), &len);
+    napi_get_value_string_utf8(env, args[3], boardName, sizeof(boardName), &len);
     
     // 获取整数参数
     int32_t osVersion, devType, xres, yres, dpi;
-    napi_get_value_int32(env, args[3], &osVersion);
-    napi_get_value_int32(env, args[4], &devType);
-    napi_get_value_int32(env, args[5], &xres);
-    napi_get_value_int32(env, args[6], &yres);
-    napi_get_value_int32(env, args[7], &dpi);
+    napi_get_value_int32(env, args[4], &osVersion);
+    napi_get_value_int32(env, args[5], &devType);
+    napi_get_value_int32(env, args[6], &xres);
+    napi_get_value_int32(env, args[7], &yres);
+    napi_get_value_int32(env, args[8], &dpi);
     
     // 获取浮点参数
     double refreshRate;
-    napi_get_value_double(env, args[8], &refreshRate);
+    napi_get_value_double(env, args[9], &refreshRate);
     
     OHOS_LOGI(NAPI_TAG, "Initializing system properties:");
     OHOS_LOGI(NAPI_TAG, "  Device: %{public}s (%{public}s)", deviceName, deviceBuild);
-    OHOS_LOGI(NAPI_TAG, "  Language: %{public}s, OS Version: %{public}d, Device Type: %{public}d", language, osVersion, devType);
+    OHOS_LOGI(NAPI_TAG, "  Language: %{public}s, Board: %{public}s", language, boardName);
+    OHOS_LOGI(NAPI_TAG, "  OS Version: %{public}d, Device Type: %{public}d", osVersion, devType);
     OHOS_LOGI(NAPI_TAG, "  Display: %{public}dx%{public}d @%{public}dDPI %.1fHz", xres, yres, dpi, refreshRate);
     
     // 调用 C++ 初始化函数
     OhosSystemProperties_Init(
-        deviceName, deviceBuild, language,
+        deviceName, deviceBuild, language, boardName,
         osVersion, devType,
         xres, yres, dpi, (float)refreshRate
     );

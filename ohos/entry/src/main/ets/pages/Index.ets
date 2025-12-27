@@ -33,19 +33,27 @@ struct Index {
    */
   private initSystemProperties(): void {
     try {
-      // 1. 获取设备信息
-      const deviceName: string = deviceInfo.productModel || "HarmonyOS Device";
+      // 1. 获取设备信息，优先使用机型名称，其次是代号
+      const deviceName: string = `${deviceInfo.brand}:${deviceInfo.marketName}` || deviceInfo.productModel;
       const deviceBuild: string = `HarmonyOS ${deviceInfo.osFullName || "NEXT"}`;
       const osVersion: number = parseInt(deviceInfo.sdkApiVersion.toString()) || 5;
+      
+      // 获取主板型号信息 - 组合多个属性来提供更详细的信息
+      const brand: string = deviceInfo.brand || "";
+      const manufacture: string = deviceInfo.manufacture || "";
+      const hardwareModel: string = deviceInfo.hardwareModel || "";
+      const marketName: string = deviceInfo.marketName || "";
+      
+      // 构建主板型号字符串
+      const boardName: string = hardwareModel || deviceInfo.productModel;
       
       console.info(`[PPSSPP] Device: ${deviceName}`);
       console.info(`[PPSSPP] Build: ${deviceBuild}`);
       console.info(`[PPSSPP] OS Version: ${osVersion}`);
+      console.info(`[PPSSPP] Board: ${boardName} (brand: ${brand}, manufacture: ${manufacture} ${hardwareModel} ${marketName})`);
       
       // 2. 获取语言设置
-      const systemLanguage: string = this.context.config.language || "zh";
-      const systemRegion: string = systemLanguage === "zh" ? "CN" : "US";
-      const langRegion: string = `${systemLanguage}_${systemRegion}`;
+      const langRegion: string = this.context.config.language || "zh_CN";
       
       console.info(`[PPSSPP] Language: ${langRegion}`);
       
@@ -73,6 +81,7 @@ struct Index {
         deviceName,
         deviceBuild,
         langRegion,
+        boardName,
         osVersion,
         devType,
         xres,

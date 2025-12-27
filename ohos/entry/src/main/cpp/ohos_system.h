@@ -100,6 +100,7 @@ void GetSafeInsets(float& left, float& top, float& right, float& bottom);
  * @param deviceName 设备名称
  * @param deviceBuild 系统版本字符串
  * @param language 语言区域代码（如 "zh_CN"）
+ * @param boardName 主板型号/硬件型号
  * @param osVersion 系统版本号
  * @param devType 设备类型（0=手机, 1=平板, 2=电视等）
  * @param xres 屏幕宽度（像素）
@@ -111,6 +112,7 @@ extern "C" void OhosSystemProperties_Init(
     const char* deviceName,
     const char* deviceBuild,
     const char* language,
+    const char* boardName,
     int osVersion,
     int devType,
     int xres, int yres, int dpi, float refreshRate);
