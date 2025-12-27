@@ -156,3 +156,5 @@ cmake-build-*/
 /UMP/
 /Qt/
 /Windows/
+source_assets/preview/*.webp
+source_assets/preview/*.png
