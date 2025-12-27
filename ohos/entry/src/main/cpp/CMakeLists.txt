@@ -64,6 +64,7 @@ set(OHOS_SOURCES
     ohos_vr_stubs.cpp
     ohos_system_properties.cpp
     ohos_system_stubs.cpp
+    ohos_offline_config.cpp
     # ohos_native_app_stubs.cpp  # 不再需要，使用真正的 UI 库
 )
 

@@ -1115,6 +1115,8 @@ void GameSettingsScreen::CreateToolsSettings(UI::ViewGroup *tools) {
 
 	tools->Add(new ItemHeader(ms->T("Tools")));
 
+#if !PPSSPP_PLATFORM(OHOS)
+	// OHOS 平台禁用成就系统，不显示此选项
 	const bool showRetroAchievements = System_GetPropertyInt(SYSPROP_DEVICE_TYPE) != DEVICE_TYPE_VR;
 	if (showRetroAchievements) {
 		auto retro = tools->Add(new Choice(sy->T("RetroAchievements")));
@@ -1123,6 +1125,7 @@ void GameSettingsScreen::CreateToolsSettings(UI::ViewGroup *tools) {
 		});
 		retro->SetIconRight(ImageID("I_RETROACHIEVEMENTS_LOGO"));
 	}
+#endif
 
 	// These were moved here so use the wrong translation objects, to avoid having to change all inis... This isn't a sustainable situation :P
 	tools->Add(new Choice(sa->T("Savedata Manager")))->OnClick.Add([=](UI::EventParams &) {
@@ -1331,6 +1334,8 @@ void GameSettingsScreen::CreateSystemSettings(UI::ViewGroup *systemSettings) {
 	UI::PopupSliderChoice *sizeChoice = systemSettings->Add(new PopupSliderChoice(&g_Config.iMemStickSizeGB, 1, 32, 16, sy->T("Memory Stick size", "Memory Stick size"), screenManager(), "GB"));
 	sizeChoice->SetFormat("%d GB");
 
+#if !PPSSPP_PLATFORM(OHOS)
+	// OHOS 平台禁用兼容性报告功能
 	systemSettings->Add(new ItemHeader(sy->T("Help the PPSSPP team")));
 	if (!enableReportsSet_)
 		enableReports_ = Reporting::IsEnabled();
@@ -1338,6 +1343,7 @@ void GameSettingsScreen::CreateSystemSettings(UI::ViewGroup *systemSettings) {
 	enableReportsCheckbox_ = new CheckBox(&enableReports_, sy->T("Enable Compatibility Server Reports"));
 	enableReportsCheckbox_->SetEnabled(Reporting::IsSupported());
 	systemSettings->Add(enableReportsCheckbox_);
+#endif
 
 	systemSettings->Add(new ItemHeader(sy->T("Emulation")));
 
@@ -1348,9 +1354,11 @@ void GameSettingsScreen::CreateSystemSettings(UI::ViewGroup *systemSettings) {
 	View *ioTimingMethod = systemSettings->Add(new PopupMultiChoice(&g_Config.iIOTimingMethod, sy->T("I/O timing method"), ioTimingMethods, 0, ARRAY_SIZE(ioTimingMethods), I18NCat::SYSTEM, screenManager()));
 	systemSettings->Add(new CheckBox(&g_Config.bForceLagSync, sy->T("Force real clock sync (slower, less lag)")))->SetDisabledPtr(&g_Config.bAutoFrameSkip);
 	PopupSliderChoice *lockedMhz = systemSettings->Add(new PopupSliderChoice(&g_Config.iLockedCPUSpeed, 0, 1000, 0, sy->T("Change CPU Clock", "Change CPU Clock (unstable)"), screenManager(), sy->T("MHz, 0:default")));
+#if !PPSSPP_PLATFORM(OHOS)
 	lockedMhz->OnChange.Add([&](UI::EventParams &) {
 		enableReportsCheckbox_->SetEnabled(Reporting::IsSupported());
 	});
+#endif
 	lockedMhz->SetZeroLabel(sy->T("Auto"));
 	PopupSliderChoice *rewindInterval = systemSettings->Add(new PopupSliderChoice(&g_Config.iRewindSnapshotInterval, 0, 60, 0, sy->T("Rewind Snapshot Interval"), screenManager(), di->T("seconds, 0:off")));
 	rewindInterval->SetFormat(di->T("%d seconds"));
@@ -1396,9 +1404,11 @@ void GameSettingsScreen::CreateSystemSettings(UI::ViewGroup *systemSettings) {
 
 	systemSettings->Add(new ItemHeader(sy->T("Cheats", "Cheats")));
 	CheckBox *enableCheats = systemSettings->Add(new CheckBox(&g_Config.bEnableCheats, sy->T("Enable Cheats")));
+#if !PPSSPP_PLATFORM(OHOS)
 	enableCheats->OnClick.Add([&](UI::EventParams &) {
 		enableReportsCheckbox_->SetEnabled(Reporting::IsSupported());
 	});
+#endif
 	systemSettings->Add(new CheckBox(&g_Config.bEnablePlugins, sy->T("Enable plugins")));
 
 	systemSettings->Add(new ItemHeader(sy->T("PSP Settings")));

@@ -25,6 +25,12 @@
 
 #include "ppsspp_config.h"
 
+#if PPSSPP_PLATFORM(OHOS)
+// OHOS 离线模式配置 - 禁用需要互联网的功能，保留局域网功能
+// 声明函数，实现在 ohos/entry/src/main/cpp/ohos_offline_config.cpp
+void OhosOfflineConfig_Apply();
+#endif
+
 // Background worker threads should be spawned in NativeInit and joined
 // in NativeShutdown.
 #include <errno.h>
@@ -552,6 +558,13 @@ void NativeInit(int argc, const char *argv[], const char *savegame_dir, const ch
 	// Note that if we don't have storage permission here, loading the config will
 	// fail and it will be set to the default. Later, we load again when we get permission.
 	g_Config.Load();
+#endif
+
+#if PPSSPP_PLATFORM(OHOS)
+	// 应用 OHOS 离线模式配置
+	// 禁用需要互联网的功能（成就、Discord、错误报告等）
+	// 保留局域网功能（Ad-hoc 联机、文件传输等）
+	OhosOfflineConfig_Apply();
 #endif
 
 	const char *fileToLog = nullptr;

@@ -15,6 +15,8 @@
 // Official git repository and contact information can be found at
 // https://github.com/hrydgard/ppsspp and http://www.ppsspp.org/.
 
+#include "ppsspp_config.h"
+
 #include <algorithm>
 #include <memory>
 
@@ -601,10 +603,13 @@ void GamePauseScreen::CreateViews() {
 
 	// TODO, also might be nice to show overall compat rating here?
 	// Based on their platform or even cpu/gpu/config.  Would add an API for it.
+#if !PPSSPP_PLATFORM(OHOS)
+	// OHOS 平台禁用错误报告功能
 	if (!portrait && Reporting::IsSupported() && g_paramSFO.GetValueString("DISC_ID").size()) {
 		auto rp = GetI18NCategory(I18NCat::REPORTING);
 		rightColumnItems->Add(new Choice(rp->T("ReportButton", "Report Feedback")))->OnClick.Handle(this, &GamePauseScreen::OnReportFeedback);
 	}
+#endif
 	rightColumnItems->Add(new Spacer(20.0));
 	Choice *exit;
 	if (g_Config.bPauseMenuExitsEmulator) {
@@ -688,10 +693,13 @@ void GamePauseScreen::ShowContextMenu(UI::View *menuButton, bool portrait) {
 
 		if (portrait) {
 			// Add some other options that are removed from the main screen in portrait mode.
+#if !PPSSPP_PLATFORM(OHOS)
+			// OHOS 平台禁用错误报告功能
 			if (Reporting::IsSupported() && g_paramSFO.GetValueString("DISC_ID").size()) {
 				auto rp = GetI18NCategory(I18NCat::REPORTING);
 				parent->Add(new Choice(rp->T("ReportButton", "Report Feedback")))->OnClick.Handle(this, &GamePauseScreen::OnReportFeedback);
 			}
+#endif
 		}
 	}, menuButton);
 	screenManager()->push(contextMenu);
