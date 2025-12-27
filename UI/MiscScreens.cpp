@@ -283,17 +283,11 @@ NewLanguageScreen::NewLanguageScreen(std::string_view title) : ListPopupScreen(t
 			continue;
 		}
 
-		// We only support Arabic on platforms where we have support for the native text rendering
-		// APIs, as proper Arabic support is way too difficult to implement ourselves.
-#if !(defined(USING_QT_UI) || PPSSPP_PLATFORM(WINDOWS) || PPSSPP_PLATFORM(ANDROID))
-		if (tempLangs[i].name.find("ar_AE") != std::string::npos) {
+		// Only keep English and Chinese languages
+		if (tempLangs[i].name.find("en_US") == std::string::npos &&
+		    tempLangs[i].name.find("zh_CN") == std::string::npos) {
 			continue;
 		}
-
-		if (tempLangs[i].name.find("fa_IR") != std::string::npos) {
-			continue;
-		}
-#endif
 
 		const File::FileInfo &lang = tempLangs[i];
 		langs_.push_back(lang);
