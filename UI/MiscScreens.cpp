@@ -560,6 +560,10 @@ void CreditsScreen::CreateDialogViews(UI::ViewGroup *parent) {
 			System_ShareText(cr->T("CheckOutPPSSPP", "https://appgallery.huawei.com/app/detail?id=app.superedu.psp&channelId=SHARE&source=appshare"));
 		});
 	}
+
+	right->Add(new Choice(cr->T("View Source Code"), ImageID("I_LINK_OUT")))->OnClick.Add([](UI::EventParams &e) {
+		System_LaunchUrl(LaunchUrlType::BROWSER_URL, "https://github.com/richshaw2015/ppsspp");
+	});
 }
 
 void CreditsScreen::update() {
