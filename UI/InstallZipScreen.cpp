@@ -296,7 +296,8 @@ void InstallZipScreen::update() {
 			if (doneView_) {
 				doneView_->SetText(iz->T("Installed!"));
 			}
-			MainScreen::showHomebrewTab = returnToHomebrew_;
+			// 移除showHomebrewTab设置，因为已经屏蔽了自制应用商店
+			// MainScreen::showHomebrewTab = returnToHomebrew_;
 		}
 	}
 

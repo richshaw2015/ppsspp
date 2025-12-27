@@ -1276,15 +1276,17 @@ void MainScreen::CreateViews() {
 		}
 
 		if (g_recentFiles.HasAny()) {
-			tabHolder_->SetCurrentTab(std::clamp(g_Config.iDefaultTab, 0, g_Config.bRemoteTab ? 3 : 2), true);
+			// 由于移除了自制应用选项卡，最大选项卡索引调整为1（只有Recent和Games）
+			tabHolder_->SetCurrentTab(std::clamp(g_Config.iDefaultTab, 0, g_Config.bRemoteTab ? 2 : 1), true);
 		} else if (g_Config.iMaxRecent > 0) {
 			tabHolder_->SetCurrentTab(1, true);	
 		}
 
-		if (backFromStore_ || showHomebrewTab) {
-			tabHolder_->SetCurrentTab(2, true);
+		// 移除showHomebrewTab相关逻辑，因为已经屏蔽了自制应用商店
+		if (backFromStore_) {
+			// 如果从商店返回，跳转到Games选项卡
+			tabHolder_->SetCurrentTab(showRecent ? 1 : 0, true);
 			backFromStore_ = false;
-			showHomebrewTab = false;
 		}
 
 		if (storageIsTemporary) {
@@ -1717,8 +1719,9 @@ void GridSettingsPopupScreen::CreatePopupContents(UI::ViewGroup *parent) {
 
 	items->Add(new CheckBox(&g_Config.bGridView1, sy->T("Display Recent on a grid")));
 	items->Add(new CheckBox(&g_Config.bGridView2, sy->T("Display Games on a grid")));
-	items->Add(new CheckBox(&g_Config.bGridView3, sy->T("Display Homebrew on a grid")));
-	static const char *defaultTabs[] = { "Recent", "Games", "Homebrew & Demos" };
+	// 隐藏自制与试玩的图标显示选项
+	// items->Add(new CheckBox(&g_Config.bGridView3, sy->T("Display Homebrew on a grid")));
+	static const char *defaultTabs[] = { "Recent", "Games" };  // 移除"Homebrew & Demos"
 	PopupMultiChoice *beziersChoice = items->Add(new PopupMultiChoice(&g_Config.iDefaultTab, sy->T("Default tab"), defaultTabs, 0, ARRAY_SIZE(defaultTabs), I18NCat::MAINMENU, screenManager()));
 
 	items->Add(new ItemHeader(sy->T("Grid icon size")));
