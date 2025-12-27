@@ -187,17 +187,10 @@ bool OhosRawfileReader::GetFileListing(const char *path, std::vector<File::FileI
     
     // 对于常用目录，返回预定义的文件列表
     if (pathStr == "lang" || pathStr == "assets/lang") {
-        // 语言文件列表（从 assets/lang/*.ini 生成）
+        // 语言文件列表 - 只保留中英文
         static const char* LANG_FILES[] = {
-            "ar_AE.ini", "az_AZ.ini", "be_BY.ini", "bg_BG.ini", "ca_ES.ini",
-            "cz_CZ.ini", "da_DK.ini", "de_DE.ini", "dr_ID.ini", "en_US.ini",
-            "es_ES.ini", "es_LA.ini", "fa_IR.ini", "fi_FI.ini", "fr_FR.ini",
-            "gl_ES.ini", "gr_EL.ini", "he_IL.ini", "he_IL_invert.ini", "hr_HR.ini",
-            "hu_HU.ini", "id_ID.ini", "it_IT.ini", "ja_JP.ini", "jv_ID.ini",
-            "ko_KR.ini", "ku_SO.ini", "lo_LA.ini", "lt-LT.ini", "ms_MY.ini",
-            "nl_NL.ini", "no_NO.ini", "pl_PL.ini", "pt_BR.ini", "pt_PT.ini",
-            "ro_RO.ini", "ru_RU.ini", "sv_SE.ini", "tg_PH.ini", "th_TH.ini",
-            "tr_TR.ini", "uk_UA.ini", "vi_VN.ini", "zh_CN.ini", "zh_TW.ini",
+            "en_US.ini",
+            "zh_CN.ini",
         };
         
         for (const char* filename : LANG_FILES) {
@@ -206,9 +199,11 @@ bool OhosRawfileReader::GetFileListing(const char *path, std::vector<File::FileI
                 continue;
             }
             
-            File::FileInfo info;
             std::string fullPath = pathStr + "/" + filename;
+            File::FileInfo info;
             if (GetFileInfo(fullPath.c_str(), &info)) {
+                // 只保留文件名，不包含路径
+                info.name = filename;
                 listing->push_back(info);
             }
         }
