@@ -10,6 +10,7 @@ import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { fileIo } from '@kit.CoreFileKit';
 import { picker } from '@kit.CoreFileKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
+import { systemShare } from '@kit.ShareKit';
 
 @Entry
 @Component
@@ -595,16 +596,17 @@ struct Index {
         console.info('[PPSSPP] Sharing text');
         
         try {
-          // 使用 Want 分享文本
-          const want: Want = {
-            action: 'ohos.want.action.sendData',
-            type: 'text/plain',
-            parameters: {
-              'ability.params.stream': text
-            }
-          };
+          // 使用 systemShare 分享文本（HarmonyOS NEXT 推荐方式）
+          const shareData: systemShare.SharedData = new systemShare.SharedData({
+            utd: 'general.plain-text',
+            content: text
+          });
           
-          this.context.startAbility(want).then(() => {
+          const shareController: systemShare.ShareController = new systemShare.ShareController(shareData);
+          shareController.show(this.context, {
+            previewMode: systemShare.SharePreviewMode.DETAIL,
+            selectionMode: systemShare.SelectionMode.SINGLE
+          }).then(() => {
             console.info('[PPSSPP] Share dialog opened successfully');
           }).catch((err: Error) => {
             console.error(`[PPSSPP] Failed to share text: ${err.message}`);
