@@ -114,7 +114,7 @@ void SystemInfoScreen::CreateDeviceInfoTab(UI::LinearLayout *deviceSpecs) {
 
 	systemInfo->Add(new Choice(si->T("Copy summary to clipboard"), ImageID("I_FILE_COPY")))->OnClick.Handle(this, &SystemInfoScreen::CopySummaryToClipboard);
 	systemInfo->Add(new InfoItem(si->T("System Name"), System_GetProperty(SYSPROP_NAME)));
-#if PPSSPP_PLATFORM(ANDROID)
+#if PPSSPP_PLATFORM(ANDROID) || PPSSPP_PLATFORM(OHOS)
 	systemInfo->Add(new InfoItem(si->T("System Version"), StringFromInt(System_GetPropertyInt(SYSPROP_SYSTEMVERSION))));
 #elif PPSSPP_PLATFORM(WINDOWS)
 	std::string sysVersion = System_GetProperty(SYSPROP_SYSTEMBUILD);
