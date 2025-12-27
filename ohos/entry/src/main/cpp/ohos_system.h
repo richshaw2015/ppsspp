@@ -14,8 +14,14 @@
 // If not, see http://www.gnu.org/licenses/
 
 /**
- * 鸿蒙系统接口
- * 提供文件系统、权限等系统级功能
+ * 鸿蒙系统接口头文件
+ * 
+ * 文件组织：
+ * - ohos_system.cpp: 系统初始化、文件系统操作
+ * - ohos_system_properties.cpp: 系统属性、安全区域管理
+ * - ohos_system_stubs.cpp: 系统功能桩实现
+ * 
+ * 提供统一的系统级功能接口
  */
 
 #ifndef OHOS_SYSTEM_H
@@ -67,29 +73,6 @@ bool FileExists(const std::string& path);
  */
 bool CreateDirectory(const std::string& path);
 
-/**
- * 获取系统语言
- */
-std::string GetSystemLanguage();
-
-/**
- * 获取设备型号
- */
-std::string GetDeviceModel();
-
-/**
- * 设置安全区域 insets（从 ArkTS 层调用）
- * @param left 左侧安全区域（像素）
- * @param top 顶部安全区域（像素）
- * @param right 右侧安全区域（像素）
- * @param bottom 底部安全区域（像素）
- */
-void SetSafeInsets(float left, float top, float right, float bottom);
-
-/**
- * 获取安全区域 insets
- */
-void GetSafeInsets(float& left, float& top, float& right, float& bottom);
 
 } // namespace OhosSystem
 

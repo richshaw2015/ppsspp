@@ -15,6 +15,16 @@
 
 /**
  * 鸿蒙系统接口实现
+ * 
+ * 职责：
+ * - 系统初始化和生命周期管理
+ * - 文件系统操作（目录管理、文件检查）
+ * - 应用数据目录管理
+ * 
+ * 注意：
+ * - 系统属性相关功能在 ohos_system_properties.cpp 中实现
+ * - 安全区域管理在 ohos_system_properties.cpp 中统一处理
+ * - 系统功能桩在 ohos_system_stubs.cpp 中实现
  */
 
 #include "ohos_system.h"
@@ -31,11 +41,6 @@ static bool g_initialized = false;
 static std::string g_dataDir;
 static std::string g_cacheDir;
 
-// 安全区域 insets（像素）
-static float g_safeInsetLeft = 0.0f;
-static float g_safeInsetTop = 0.0f;
-static float g_safeInsetRight = 0.0f;
-static float g_safeInsetBottom = 0.0f;
 
 bool Initialize(const std::string& dataDir, const std::string& cacheDir) {
     if (g_initialized) {
@@ -112,32 +117,7 @@ bool CreateDirectory(const std::string& path) {
     return false;
 }
 
-std::string GetSystemLanguage() {
-    // 从鸿蒙系统获取语言设置
-    return System_GetProperty(SYSPROP_LANGREGION);
-}
 
-std::string GetDeviceModel() {
-    // 从鸿蒙系统获取设备型号
-    return System_GetProperty(SYSPROP_NAME);
-}
-
-void SetSafeInsets(float left, float top, float right, float bottom) {
-    g_safeInsetLeft = left;
-    g_safeInsetTop = top;
-    g_safeInsetRight = right;
-    g_safeInsetBottom = bottom;
-    
-    OHOS_LOGI(SYS_TAG, "Safe insets set: left=%{public}.1f, top=%{public}.1f, right=%{public}.1f, bottom=%{public}.1f",
-              left, top, right, bottom);
-}
-
-void GetSafeInsets(float& left, float& top, float& right, float& bottom) {
-    left = g_safeInsetLeft;
-    top = g_safeInsetTop;
-    right = g_safeInsetRight;
-    bottom = g_safeInsetBottom;
-}
 
 } // namespace OhosSystem
 

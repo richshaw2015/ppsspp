@@ -14,6 +14,13 @@
 // If not, see http://www.gnu.org/licenses/
 
 // HarmonyOS 系统属性实现
+//
+// 职责：
+// - 系统属性的存储和访问（设备信息、显示信息等）
+// - System_GetProperty* 系列函数的实现
+// - 安全区域（Safe Insets）的统一管理
+// - 系统请求（System_MakeRequest）的处理
+// - 与 ArkTS 层的数据交互接口
 
 #include "Common/System/System.h"
 #include "Common/System/Request.h"

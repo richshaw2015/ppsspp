@@ -407,8 +407,7 @@ static napi_value SetSafeInsets(napi_env env, napi_callback_info info) {
     OHOS_LOGI(NAPI_TAG, "Setting safe insets: left=%{public}.1f, top=%{public}.1f, right=%{public}.1f, bottom=%{public}.1f",
               left, top, right, bottom);
     
-    // 设置安全区域（同时调用两个函数）
-    OhosSystem::SetSafeInsets((float)left, (float)top, (float)right, (float)bottom);
+    // 设置安全区域（统一在 ohos_system_properties.cpp 中处理）
     OhosSystemProperties_SetSafeInsets((float)left, (float)top, (float)right, (float)bottom);
     
     return nullptr;
