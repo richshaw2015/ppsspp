@@ -740,7 +740,8 @@ void CreditsScroller::Draw(UIContext &dc) {
 
 	const float yOffset = fmodf(t - dragOffset_, (float)contentsHeight);
 
-	float y = bounds.h - yOffset;
+	// Start from screen center instead of bottom
+	float y = bounds.h / 2.0f - yOffset;
 	for (int i = 0; i < numItems; i++, y += itemHeight) {
 		if (y + itemHeight < 0.0f)
 			continue;
