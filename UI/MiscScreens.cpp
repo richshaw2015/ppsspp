@@ -342,7 +342,9 @@ void NewLanguageScreen::OnCompleted(DialogResult result) {
 		iniLoadedSuccessfully = g_i18nrepo.LoadIni(g_Config.sLanguageIni, langOverridePath);
 
 	if (iniLoadedSuccessfully) {
-		RecreateViews();
+		// Recreate views for all screens, not just the current one.
+		// This ensures the main screen and other screens are also updated with the new language.
+		System_PostUIMessage(UIMessage::RECREATE_VIEWS);
 		System_Notify(SystemNotification::UI);
 	} else {
 		// Failed to load the language ini. Shouldn't really happen, but let's just switch back to the old language.
