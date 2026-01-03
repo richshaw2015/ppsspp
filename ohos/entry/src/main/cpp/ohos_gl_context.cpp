@@ -303,80 +303,7 @@ bool OhosGLContext::InitEGL() {
     }
     INFO_LOG(Log::G3D, "EGL config chosen, numConfigs: %d", numConfigs);
     
-    // 4. 创建 EGL Surface
-    if (native_window_) {
-        // 在鸿蒙平台，EGLNativeWindowType 是 OHNativeWindow* 指针类型
-        OHNativeWindow* nativeWindow = reinterpret_cast<OHNativeWindow*>(native_window_);
-        
-        // 设置 native window 的缓冲区格式和大小
-        // 这对于 OpenGL 渲染正确显示非常重要
-        int32_t code = SET_BUFFER_GEOMETRY;
-        int32_t ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, width_, height_);
-        if (ret != 0) {
-            WARN_LOG(Log::G3D, "OH_NativeWindow_NativeWindowHandleOpt SET_BUFFER_GEOMETRY failed: %d", ret);
-        } else {
-            INFO_LOG(Log::G3D, "Native window buffer geometry set to %dx%d", width_, height_);
-        }
-        
-        // 设置缓冲区格式为 RGBA8888
-        code = SET_FORMAT;
-        ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, NATIVEBUFFER_PIXEL_FMT_RGBA_8888);
-        if (ret != 0) {
-            WARN_LOG(Log::G3D, "OH_NativeWindow_NativeWindowHandleOpt SET_FORMAT failed: %d", ret);
-        } else {
-            INFO_LOG(Log::G3D, "Native window buffer format set to RGBA8888");
-        }
-        
-        // 设置缓冲区使用标志 - GPU 渲染需要这个
-        // 使用 HarmonyOS 定义的 usage 标志
-#ifdef NATIVEBUFFER_USAGE_HW_RENDER
-        code = SET_USAGE;
-        uint64_t usage = NATIVEBUFFER_USAGE_HW_RENDER | NATIVEBUFFER_USAGE_HW_TEXTURE | NATIVEBUFFER_USAGE_MEM_DMA;
-        ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, usage);
-        if (ret != 0) {
-            WARN_LOG(Log::G3D, "OH_NativeWindow_NativeWindowHandleOpt SET_USAGE failed: %d", ret);
-        } else {
-            INFO_LOG(Log::G3D, "Native window buffer usage set for GPU rendering");
-        }
-#else
-        // 如果没有定义 usage 标志，尝试使用数值
-        // NATIVEBUFFER_USAGE_HW_RENDER = 0x100, NATIVEBUFFER_USAGE_HW_TEXTURE = 0x200, NATIVEBUFFER_USAGE_MEM_DMA = 0x8
-        code = SET_USAGE;
-        uint64_t usage = 0x100 | 0x200 | 0x8;  // HW_RENDER | HW_TEXTURE | MEM_DMA
-        ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, usage);
-        if (ret != 0) {
-            WARN_LOG(Log::G3D, "OH_NativeWindow_NativeWindowHandleOpt SET_USAGE failed: %d (using hardcoded values)", ret);
-        } else {
-            INFO_LOG(Log::G3D, "Native window buffer usage set for GPU rendering (using hardcoded values)");
-        }
-#endif
-        
-        // 查询当前格式以验证设置
-        int32_t currentFormat = 0;
-        code = GET_FORMAT;
-        ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, &currentFormat);
-        if (ret == 0) {
-            INFO_LOG(Log::G3D, "Native window current format: %d", currentFormat);
-        }
-        
-        surface_ = eglCreateWindowSurface(display_, config_, 
-                                         reinterpret_cast<EGLNativeWindowType>(native_window_), 
-                                         nullptr);
-        if (surface_ == EGL_NO_SURFACE) {
-            EGLint error = eglGetError();
-            ERROR_LOG(Log::G3D, "Failed to create EGL surface, error: 0x%x", error);
-            return false;
-        }
-        
-        // 查询 EGL surface 的实际大小
-        EGLint surfaceWidth = 0, surfaceHeight = 0;
-        eglQuerySurface(display_, surface_, EGL_WIDTH, &surfaceWidth);
-        eglQuerySurface(display_, surface_, EGL_HEIGHT, &surfaceHeight);
-        INFO_LOG(Log::G3D, "EGL surface created successfully, actual size: %dx%d (requested: %dx%d)", 
-                 surfaceWidth, surfaceHeight, width_, height_);
-    }
-    
-    // 5. 创建 EGL Context
+    // 4. 创建 EGL Context（必须在创建 Surface 之前）
     const EGLint contextAttribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 3,
         EGL_NONE
@@ -390,10 +317,42 @@ bool OhosGLContext::InitEGL() {
     }
     INFO_LOG(Log::G3D, "EGL context created successfully");
     
+    // 5. 创建 EGL Surface
+    if (!native_window_) {
+        ERROR_LOG(Log::G3D, "native_window_ is null, cannot create EGL surface");
+        eglDestroyContext(display_, context_);
+        context_ = EGL_NO_CONTEXT;
+        return false;
+    }
+    
+    // 直接创建 surface，不进行复杂的缓冲区配置
+    // 鸿蒙系统会自动处理缓冲区配置
+    surface_ = eglCreateWindowSurface(display_, config_, 
+                                     reinterpret_cast<EGLNativeWindowType>(native_window_), 
+                                     nullptr);
+    if (surface_ == EGL_NO_SURFACE) {
+        EGLint error = eglGetError();
+        ERROR_LOG(Log::G3D, "Failed to create EGL surface, error: 0x%x", error);
+        eglDestroyContext(display_, context_);
+        context_ = EGL_NO_CONTEXT;
+        return false;
+    }
+    
+    // 查询 EGL surface 的实际大小
+    EGLint surfaceWidth = 0, surfaceHeight = 0;
+    eglQuerySurface(display_, surface_, EGL_WIDTH, &surfaceWidth);
+    eglQuerySurface(display_, surface_, EGL_HEIGHT, &surfaceHeight);
+    INFO_LOG(Log::G3D, "EGL surface created successfully, actual size: %dx%d (requested: %dx%d)", 
+             surfaceWidth, surfaceHeight, width_, height_);
+    
     // 6. 绑定上下文
     if (!eglMakeCurrent(display_, surface_, surface_, context_)) {
         EGLint error = eglGetError();
         ERROR_LOG(Log::G3D, "Failed to make EGL context current, error: 0x%x", error);
+        eglDestroySurface(display_, surface_);
+        surface_ = EGL_NO_SURFACE;
+        eglDestroyContext(display_, context_);
+        context_ = EGL_NO_CONTEXT;
         return false;
     }
     INFO_LOG(Log::G3D, "EGL context made current successfully");
@@ -402,6 +361,11 @@ bool OhosGLContext::InitEGL() {
     EGLContext currentContext = eglGetCurrentContext();
     if (currentContext != context_) {
         ERROR_LOG(Log::G3D, "EGL context verification failed");
+        eglMakeCurrent(display_, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        eglDestroySurface(display_, surface_);
+        surface_ = EGL_NO_SURFACE;
+        eglDestroyContext(display_, context_);
+        context_ = EGL_NO_CONTEXT;
         return false;
     }
     

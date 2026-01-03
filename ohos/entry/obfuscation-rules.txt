@@ -21,3 +21,56 @@
 -enable-toplevel-obfuscation
 -enable-filename-obfuscation
 -enable-export-obfuscation
+
+# Keep PPSSPP native module related names
+# These are required for native module loading and XComponent integration
+-keep-global-name
+ppsspp
+libppsspp_ohos
+ppsspp_ohos
+_ppssppModule
+
+# Keep all PPSSPP native function names
+-keep-property-name
+initEmulator
+shutdownEmulator
+loadGame
+registerXComponent
+initSystemProperties
+setSafeInsets
+setAudioConfig
+sendTouchEvent
+sendKeyEvent
+sendAxisEvent
+sendMultiAxisEvent
+vibrate
+setVibrationCallback
+checkVibrationConfig
+setOpenUrlCallback
+setBrowseImageCallback
+onImageSelected
+setBrowseFileCallback
+onFileSelected
+setBrowseFolderCallback
+onFolderSelected
+setInputTextCallback
+onInputTextCompleted
+setToastCallback
+setClipboardCallback
+setKeepScreenOnCallback
+setShareTextCallback
+setShowFileInFolderCallback
+setRestartAppCallback
+setExitAppCallback
+setRecreateActivityCallback
+setImmersiveModeCallback
+setScreenRotationCallback
+setShowKeyboardCallback
+
+# Keep XComponent related names
+-keep-property-name
+xComponentId
+xComponentController
+libraryname
+onLoad
+onDestroy

@@ -12,6 +12,11 @@ import { picker } from '@kit.CoreFileKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { systemShare } from '@kit.ShareKit';
 
+// 强制引用 ppsspp 模块，防止 Release 模式下被优化掉
+// 这是一个 workaround，确保模块在编译时不会被 tree-shaking 移除
+const _ppssppModule: object = ppsspp as object;
+console.info('[PPSSPP] Native module reference: ' + (typeof _ppssppModule));
+
 @Entry
 @Component
 struct Index {
@@ -942,11 +947,29 @@ struct Index {
     }
   }
 
-  async aboutToAppear(): Promise<void> {
-    console.info('[PPSSPP] Page aboutToAppear');
+  /**
+   * 初始化 PPSSPP 核心
+   * 注意：必须在 XComponent onLoad 之后调用，确保 XComponent 已经完全初始化
+   */
+  private async initializePPSSPP(): Promise<void> {
+    if (this.isInitialized) {
+      console.info('[PPSSPP] Already initialized, skipping');
+      return;
+    }
     
-    // 初始化 PPSSPP 核心
+    console.info('[PPSSPP] Initializing PPSSPP core...');
+    
     try {
+      // 检查模块是否正确加载
+      if (typeof ppsspp === 'undefined' || typeof ppsspp.initEmulator !== 'function') {
+        console.error('[PPSSPP] NAPI module not properly loaded!');
+        console.error('[PPSSPP] ppsspp type: ' + typeof ppsspp);
+        if (typeof ppsspp !== 'undefined') {
+          console.error('[PPSSPP] Available functions: ' + Object.keys(ppsspp).join(', '));
+        }
+        return;
+      }
+      
       console.info('[PPSSPP] filesDir: ' + this.context.filesDir);
       console.info('[PPSSPP] cacheDir: ' + this.context.cacheDir);
       const success: boolean = ppsspp.initEmulator(
@@ -959,8 +982,8 @@ struct Index {
         // 初始化系统属性（DPI、设备类型等）- 必须在 initEmulator 之后调用
         this.initSystemProperties();
         
-				// 圆角屏幕的最小安全边距（像素）
-				const MIN_CORNER_INSET = 40;
+        // 圆角屏幕的最小安全边距（像素）
+        const MIN_CORNER_INSET = 40;
 
         // 获取并设置安全区域
         try {
@@ -973,12 +996,6 @@ struct Index {
           // 打印避让区域信息（用于调试）
           console.info(`[PPSSPP] systemAvoidArea - left: ${systemAvoidArea.leftRect.width}X${systemAvoidArea.leftRect.height}, right: ${systemAvoidArea.rightRect?.width}X${systemAvoidArea.rightRect?.height}`);
           console.info(`[PPSSPP] cutoutAvoidArea - left: ${cutoutAvoidArea.leftRect.width}X${cutoutAvoidArea.leftRect.height}, right: ${cutoutAvoidArea.rightRect.width}X${cutoutAvoidArea.rightRect.height}`);
-          
-          // 横屏游戏的安全区域策略：
-          // 1. 使用 TYPE_CUTOUT（刘海屏）作为基础
-          // 2. 左右对称：如果一侧有刘海，另一侧也使用相同宽度（视觉平衡）
-          // 3. 为圆角屏幕添加最小安全边距（鸿蒙没有圆角 API）
-          // 4. 不使用 TYPE_SYSTEM（状态栏/导航栏），因为横屏游戏会隐藏它们
           
           // 获取刘海区域
           const cutoutLeft = cutoutAvoidArea.leftRect?.width || 0;
@@ -1030,13 +1047,20 @@ struct Index {
         }, 500);
         
         this.isInitialized = true;
+        console.info('[PPSSPP] PPSSPP core initialized successfully');
       } else {
         console.error('[PPSSPP] Failed to initialize emulator');
       }
     } catch (err) {
       const error = err as Error;
-      console.error('[PPSSPP] Error:', error.message);
+      console.error('[PPSSPP] Error initializing PPSSPP:', error.message);
     }
+  }
+
+  async aboutToAppear(): Promise<void> {
+    console.info('[PPSSPP] Page aboutToAppear');
+    // 注意：不在这里初始化 PPSSPP，而是在 XComponent onLoad 中初始化
+    // 这样可以确保 XComponent 已经完全初始化后再调用 initEmulator
   }
 
   aboutToDisappear() {
@@ -1051,40 +1075,57 @@ struct Index {
   build() {
     Stack() {
       // XComponent 用于渲染
-      if (this.isInitialized) {
-        XComponent({
-          id: this.xComponentId,
-          type: XComponentType.SURFACE,
-          libraryname: 'ppsspp_ohos',
-          controller: this.xComponentController
-        })
-          .onLoad(() => {
-            console.info('[PPSSPP] XComponent onLoad');
-            console.info('[PPSSPP] XComponent surfaceId: ' + this.xComponentController.getXComponentSurfaceId());
-          })
-          .onDestroy(() => {
-            console.info('[PPSSPP] XComponent onDestroy');
-          })
-          .onKeyEvent((event: KeyEvent): void => {
-            // 处理按键事件（键盘、手柄等）
-            const isDown: boolean = event.type === KeyType.Down;
-            const isRepeat: boolean = event.type === KeyType.Down && event.keyCode === this.lastKeyCode;
-            this.lastKeyCode = isDown ? event.keyCode : 0;
-            
-            // 发送按键事件到 PPSSPP
-            // deviceId: 1 = 键盘
-            const consumed: boolean = ppsspp.sendKeyEvent(event.keyCode, isDown, isRepeat, 1);
-            
-            // 如果 PPSSPP 消费了按键，阻止默认行为
-            if (consumed) {
-              event.stopPropagation();
+      // 注意：XComponent 必须始终渲染（不能用 if 条件包裹），否则 NAPI 模块加载时
+      // 无法通过 exports 获取到 XComponent 对象，导致 Release 模式下黑屏
+      // XComponent 的 libraryname 会触发 native 模块的加载和 XComponent 回调注册
+      XComponent({
+        id: this.xComponentId,
+        type: XComponentType.SURFACE,
+        libraryname: 'ppsspp_ohos',
+        controller: this.xComponentController
+      })
+        .onLoad((xComponentContext?: object | undefined) => {
+          console.info('[PPSSPP] XComponent onLoad, surfaceId: ' + this.xComponentController.getXComponentSurfaceId());
+          
+          // 注册 XComponent
+          try {
+            if (typeof ppsspp !== 'undefined' && typeof ppsspp.registerXComponent === 'function') {
+              ppsspp.registerXComponent(this.xComponentId);
+              console.info('[PPSSPP] XComponent registered');
             }
-          })
-          .focusable(true)
-          .defaultFocus(true)
-          .width('100%')
-          .height('100%')
-      }
+          } catch (err) {
+            console.error('[PPSSPP] Failed to register XComponent:', (err as Error).message);
+          }
+          
+          // 初始化 PPSSPP
+          this.initializePPSSPP();
+        })
+        .onDestroy(() => {
+          console.info('[PPSSPP] XComponent onDestroy');
+        })
+        .onKeyEvent((event: KeyEvent): void => {
+          // 只有初始化完成后才处理按键事件
+          if (!this.isInitialized) {
+            return;
+          }
+          // 处理按键事件（键盘、手柄等）
+          const isDown: boolean = event.type === KeyType.Down;
+          const isRepeat: boolean = event.type === KeyType.Down && event.keyCode === this.lastKeyCode;
+          this.lastKeyCode = isDown ? event.keyCode : 0;
+          
+          // 发送按键事件到 PPSSPP
+          // deviceId: 1 = 键盘
+          const consumed: boolean = ppsspp.sendKeyEvent(event.keyCode, isDown, isRepeat, 1);
+          
+          // 如果 PPSSPP 消费了按键，阻止默认行为
+          if (consumed) {
+            event.stopPropagation();
+          }
+        })
+        .focusable(true)
+        .defaultFocus(true)
+        .width('100%')
+        .height('100%')
       
       // 文本输入对话框
       if (this.showInputDialog) {

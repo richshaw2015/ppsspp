@@ -41,10 +41,22 @@
 
 #define NAPI_TAG "PPSSPP_NAPI"
 
+// 确保导出符号在 Release 模式下可见
+#ifndef OHOS_NATIVE_XCOMPONENT_EXPORT
+#define OHOS_NATIVE_XCOMPONENT_EXPORT
+#endif
+
 // 全局变量
 static OH_NativeXComponent* g_nativeXComponent = nullptr;
 static bool g_nativeInitCalled = false;
 static NativeResourceManager* g_resourceManager = nullptr;
+
+// 保存 napi_env 和 exports，用于延迟获取 XComponent
+static napi_env g_savedEnv = nullptr;
+static napi_ref g_savedExportsRef = nullptr;
+
+// 前向声明
+static void TryGetXComponentFromExports(napi_env env, napi_value exports);
 
 // XComponent 回调函数
 __attribute__((noinline))
@@ -166,13 +178,99 @@ static bool InitializeXComponent(OH_NativeXComponent* component, const char* sou
 }
 
 /**
- * NativeXComponentInit - 由 XComponent 的 libraryname 参数触发（旧 API）
- * 注意：从 API 10 开始，这个函数可能不会被调用
+ * NativeXComponentInit - 由 XComponent 的 libraryname 参数触发
+ * 这是 HarmonyOS 中 XComponent 获取 native 组件的标准方式
+ * 
+ * 注意：必须使用 extern "C" 和 visibility("default") 确保符号可被系统找到
  */
 extern "C" __attribute__((visibility("default")))
-void NativeXComponentInit(OH_NativeXComponent* component) {
-    OHOS_LOGI(NAPI_TAG, "========== NativeXComponentInit ==========");
+void OHOS_NATIVE_XCOMPONENT_EXPORT NativeXComponentInit(OH_NativeXComponent* component) {
+    OHOS_LOGI(NAPI_TAG, "========== NativeXComponentInit CALLED ==========");
+    OHOS_LOGI(NAPI_TAG, "component pointer: %{public}p", (void*)component);
     InitializeXComponent(component, "NativeXComponentInit");
+}
+
+/**
+ * 注册 XComponent - 由 ArkTS 层在 XComponent onLoad 时调用
+ * 这是 HarmonyOS NEXT 中获取 XComponent 的推荐方式
+ * 参数: xcomponentId (string), xcomponentContext (object - 可选，XComponent 的 context)
+ * 
+ * 在 Release 模式下，Init() 时 exports 中可能没有 XComponent 对象，
+ * 所以我们需要在这里重新尝试获取。
+ */
+static napi_value RegisterXComponent(napi_env env, napi_callback_info info) {
+    OHOS_LOGI(NAPI_TAG, "========== RegisterXComponent ==========");
+    
+    // 检查是否已经初始化
+    if (g_nativeXComponent != nullptr) {
+        OHOS_LOGW(NAPI_TAG, "XComponent already registered");
+        napi_value result;
+        napi_get_boolean(env, true, &result);
+        return result;
+    }
+    
+    // 获取参数
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    
+    if (argc < 1) {
+        OHOS_LOGE(NAPI_TAG, "RegisterXComponent requires xcomponentId argument");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    // 获取 XComponent ID
+    char xcomponentId[64] = {0};
+    size_t len;
+    napi_get_value_string_utf8(env, args[0], xcomponentId, sizeof(xcomponentId), &len);
+    OHOS_LOGI(NAPI_TAG, "XComponent ID from ArkTS: %{public}s", xcomponentId);
+    
+    // 保存 env 供后续使用
+    g_savedEnv = env;
+    
+    // 方法 1: 尝试使用 OH_NativeXComponent_GetXComponentById API (HarmonyOS NEXT)
+    // 注意：这个 API 可能在某些版本中不可用
+#ifdef OH_NATIVEXCOMPONENT_RESULT_SUCCESS
+    OHOS_LOGI(NAPI_TAG, "Trying OH_NativeXComponent_GetXComponentById...");
+    OH_NativeXComponent* xcomponent = nullptr;
+    // 注意：OH_NativeXComponent_GetXComponentById 需要 env 参数
+    // 但这个 API 的签名可能因版本而异
+    // int32_t ret = OH_NativeXComponent_GetXComponentById(env, xcomponentId, &xcomponent);
+    // 如果 API 不可用，我们使用其他方法
+#endif
+    
+    // 方法 2: 如果 XComponent 还没有初始化，尝试从保存的 exports 中获取
+    if (g_nativeXComponent == nullptr && g_savedExportsRef != nullptr) {
+        OHOS_LOGI(NAPI_TAG, "Trying to get XComponent from saved exports...");
+        napi_value savedExports;
+        napi_status status = napi_get_reference_value(env, g_savedExportsRef, &savedExports);
+        if (status == napi_ok && savedExports != nullptr) {
+            TryGetXComponentFromExports(env, savedExports);
+        }
+    }
+    
+    // 方法 3: 如果第二个参数是 XComponent context，尝试从中获取
+    if (g_nativeXComponent == nullptr && argc >= 2) {
+        napi_valuetype valueType;
+        napi_typeof(env, args[1], &valueType);
+        if (valueType == napi_object) {
+            OHOS_LOGI(NAPI_TAG, "Trying to get XComponent from context argument...");
+            TryGetXComponentFromExports(env, args[1]);
+        }
+    }
+    
+    // 如果还是没有获取到，记录日志但不阻塞
+    // XComponent 可能会通过 NativeXComponentInit 回调初始化
+    if (g_nativeXComponent == nullptr) {
+        OHOS_LOGW(NAPI_TAG, "XComponent not yet available from exports");
+        OHOS_LOGI(NAPI_TAG, "Waiting for NativeXComponentInit callback or surface creation...");
+    }
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
 }
 
 /**
@@ -516,6 +614,18 @@ static void TryGetXComponentFromExports(napi_env env, napi_value exports) {
 static napi_value Init(napi_env env, napi_value exports) {
     OHOS_LOGI(NAPI_TAG, "========== NAPI Module Init ==========");
     
+    // 保存 env 和 exports 引用，供后续使用（如 RegisterXComponent）
+    g_savedEnv = env;
+    
+    // 创建对 exports 的引用，防止被 GC 回收
+    napi_status refStatus = napi_create_reference(env, exports, 1, &g_savedExportsRef);
+    if (refStatus != napi_ok) {
+        OHOS_LOGW(NAPI_TAG, "Failed to create reference to exports: %{public}d", refStatus);
+        g_savedExportsRef = nullptr;
+    } else {
+        OHOS_LOGI(NAPI_TAG, "Saved exports reference for later use");
+    }
+    
     // 尝试从 exports 获取 XComponent（当使用 libraryname 时）
     TryGetXComponentFromExports(env, exports);
     
@@ -524,6 +634,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"initEmulator", nullptr, InitEmulator, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"shutdownEmulator", nullptr, ShutdownEmulator, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"loadGame", nullptr, LoadGame, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"registerXComponent", nullptr, RegisterXComponent, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"initSystemProperties", nullptr, InitSystemProperties, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setSafeInsets", nullptr, SetSafeInsets, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"setAudioConfig", nullptr, SetAudioConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
@@ -556,33 +667,66 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"setShowKeyboardCallback", nullptr, NapiPPSSPP::SetShowKeyboardCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
     
-    napi_status status = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
-    if (status != napi_ok) {
-        OHOS_LOGE(NAPI_TAG, "Failed to define NAPI properties");
+    napi_status propStatus = napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
+    if (propStatus != napi_ok) {
+        OHOS_LOGE(NAPI_TAG, "Failed to define NAPI properties: %{public}d", propStatus);
         return nullptr;
     }
     
-    OHOS_LOGI(NAPI_TAG, "NAPI module initialized");
+    OHOS_LOGI(NAPI_TAG, "NAPI module initialized with %{public}zu functions", sizeof(desc) / sizeof(desc[0]));
     return exports;
 }
 
 /**
  * 模块描述符
+ * 
+ * 重要：HarmonyOS 中有两种加载 native 模块的方式：
+ * 1. ArkTS import: import ppsspp from 'libppsspp_ohos.so' - 使用 .so 文件名
+ * 2. XComponent libraryname: libraryname: 'ppsspp_ohos' - 使用库名（不含 lib 前缀和 .so 后缀）
+ * 
+ * nm_modname 必须与 XComponent 的 libraryname 匹配，因为 XComponent 是主要的加载入口
+ * ArkTS import 会自动找到对应的 .so 文件
  */
 static napi_module ppssppModule = {
     .nm_version = 1,
     .nm_flags = 0,
     .nm_filename = nullptr,
     .nm_register_func = Init,
-    .nm_modname = "ppsspp_ohos",
+    .nm_modname = "ppsspp_ohos",  // 必须与 XComponent 的 libraryname 匹配
     .nm_priv = nullptr,
     .reserved = {0},
 };
 
+// 静态初始化：确保在库加载时输出日志
+// 这是一个备用机制，用于验证库是否被加载
+namespace {
+    struct StaticInitializer {
+        StaticInitializer() {
+            OH_LOG_Print(OHOS_LOG_APP, OHOS_LOG_INFO, OHOS_LOG_DOMAIN, NAPI_TAG, 
+                "========== PPSSPP Native Library Loaded (Static Init) ==========");
+        }
+    };
+    static StaticInitializer s_staticInit;
+}
+
 /**
  * 模块注册
+ * 使用 constructor 属性确保在库加载时自动调用
+ * visibility("default") 确保符号在 Release 模式下不会被剥离
+ * used 属性防止编译器优化掉这个函数
  */
-extern "C" __attribute__((constructor)) void RegisterPPSSPPModule() {
-    OHOS_LOGI(NAPI_TAG, "Registering PPSSPP module...");
+extern "C" __attribute__((constructor, visibility("default"), used)) void RegisterPPSSPPModule() {
+    // 使用 hilog 直接输出，确保日志可见
+    OH_LOG_Print(OHOS_LOG_APP, OHOS_LOG_INFO, OHOS_LOG_DOMAIN, NAPI_TAG, "========== RegisterPPSSPPModule CALLED ==========");
+    OH_LOG_Print(OHOS_LOG_APP, OHOS_LOG_INFO, OHOS_LOG_DOMAIN, NAPI_TAG, "Registering PPSSPP module (ppsspp_ohos)...");
     napi_module_register(&ppssppModule);
+    OH_LOG_Print(OHOS_LOG_APP, OHOS_LOG_INFO, OHOS_LOG_DOMAIN, NAPI_TAG, "PPSSPP module registered successfully");
+    OH_LOG_Print(OHOS_LOG_APP, OHOS_LOG_INFO, OHOS_LOG_DOMAIN, NAPI_TAG, "========== RegisterPPSSPPModule DONE ==========");
 }
+
+// 备用注册方式：使用 NAPI_MODULE 宏（HarmonyOS 推荐方式）
+// 这个宏会在模块加载时自动调用 Init 函数
+// 注意：NAPI_MODULE 宏需要模块名与 nm_modname 一致
+#ifdef NAPI_MODULE
+NAPI_MODULE(ppsspp_ohos, Init)
+#endif

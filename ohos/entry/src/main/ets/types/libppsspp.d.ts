@@ -26,6 +26,41 @@ declare namespace ppsspp {
   function loadGame(gamePath: string): boolean;
 
   /**
+   * 注册 XComponent
+   * 在 XComponent onLoad 时调用，确保 native 层可以获取到 XComponent
+   * @param xcomponentId XComponent 的 ID
+   * @returns 成功返回 true
+   */
+  function registerXComponent(xcomponentId: string): boolean;
+
+  /**
+   * 初始化系统属性
+   * @param deviceName 设备名称
+   * @param deviceBuild 设备构建信息
+   * @param language 语言设置
+   * @param boardName 主板名称
+   * @param osVersion 操作系统版本
+   * @param devType 设备类型 (0=手机, 1=平板, 2=电视)
+   * @param xres 屏幕宽度
+   * @param yres 屏幕高度
+   * @param dpi 屏幕 DPI
+   * @param refreshRate 屏幕刷新率
+   * @returns 成功返回 true
+   */
+  function initSystemProperties(
+    deviceName: string,
+    deviceBuild: string,
+    language: string,
+    boardName: string,
+    osVersion: number,
+    devType: number,
+    xres: number,
+    yres: number,
+    dpi: number,
+    refreshRate: number
+  ): boolean;
+
+  /**
    * 设置安全区域 insets（避开刘海屏等）
    * @param left 左侧安全区域（像素）
    * @param top 顶部安全区域（像素）

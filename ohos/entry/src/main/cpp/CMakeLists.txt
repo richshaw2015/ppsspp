@@ -88,6 +88,37 @@ target_compile_options(ppsspp_ohos PRIVATE
     -Wno-sign-compare
     -fno-strict-aliasing
     -fno-math-errno
+    -fvisibility=default  # 确保符号可见性，防止 Release 模式下符号被剥离
+)
+
+# Release 优化：使用 -O2 而不是 -O3，避免激进优化
+# 同时禁用符号剥离，确保 NAPI 函数可以被正确导出
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(ppsspp_ohos PRIVATE -O2)
+    # 防止链接器剥离未使用的符号
+    # --no-gc-sections: 禁用垃圾回收，保留所有 section
+    # --export-dynamic: 导出所有动态符号
+    # -z,now: 立即绑定所有符号
+    target_link_options(ppsspp_ohos PRIVATE 
+        -Wl,--no-gc-sections
+        -Wl,--export-dynamic
+        -Wl,-z,now
+    )
+endif()
+
+# 确保 NAPI 入口点符号不被剥离（无论 Debug 还是 Release）
+# 使用 --undefined 强制保留关键符号
+# 使用 --whole-archive 确保静态库中的所有符号都被链接
+target_link_options(ppsspp_ohos PRIVATE
+    -Wl,--undefined=RegisterPPSSPPModule
+    -Wl,--undefined=NativeXComponentInit
+    -Wl,--undefined=Init
+)
+
+# 禁用 LTO（Link Time Optimization）以防止构造函数被优化掉
+# LTO 可能会在 Release 模式下移除看似未使用的代码
+set_target_properties(ppsspp_ohos PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION OFF
 )
 
 # 链接鸿蒙系统库
