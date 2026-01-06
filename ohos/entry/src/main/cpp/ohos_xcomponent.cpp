@@ -473,16 +473,16 @@ void RenderLoop() {
             double frameStartTime = time_now_d();
             
             // 前几帧、每100帧、或者超过2秒没有日志时输出
-            bool shouldLog = (frameNum < 10) || (frameNum % 100 == 0) || 
-                             (frameStartTime - lastFrameLogTime > 2.0);
+//            bool shouldLog = (frameNum < 10) || (frameNum % 100 == 0) || 
+//                             (frameStartTime - lastFrameLogTime > 2.0);
             
-            if (shouldLog) {
-                double timeSinceLastLog = frameStartTime - lastFrameLogTime;
-                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: START (frames since last log: %{public}d, time: %{public}.2fs)", 
-                          frameNum, frameNum - lastLoggedFrame, timeSinceLastLog);
-                lastFrameLogTime = frameStartTime;
-                lastLoggedFrame = frameNum;
-            }
+//            if (shouldLog) {
+//                double timeSinceLastLog = frameStartTime - lastFrameLogTime;
+//                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: START (frames since last log: %{public}d, time: %{public}.2fs)", 
+//                          frameNum, frameNum - lastLoggedFrame, timeSinceLastLog);
+//                lastFrameLogTime = frameStartTime;
+//                lastLoggedFrame = frameNum;
+//            }
             
             // 渲染一帧 - 这会生成渲染命令并推送到队列
 //            if (shouldLog) {
@@ -494,18 +494,18 @@ void RenderLoop() {
             double nativeFrameTime = time_now_d() - nativeFrameStart;
             
             // 如果 NativeFrame 耗时超过 100ms，记录警告
-            if (nativeFrameTime > 0.1) {
-                OHOS_LOGW(XCOMP_TAG, "Frame %{public}d: NativeFrame took %{public}.3fs (SLOW!)", frameNum, nativeFrameTime);
-            } else if (shouldLog) {
-                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: NativeFrame completed in %{public}.3fs", frameNum, nativeFrameTime);
-            }
+//            if (nativeFrameTime > 0.1) {
+//                OHOS_LOGW(XCOMP_TAG, "Frame %{public}d: NativeFrame took %{public}.3fs (SLOW!)", frameNum, nativeFrameTime);
+//            } else if (shouldLog) {
+//                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: NativeFrame completed in %{public}.3fs", frameNum, nativeFrameTime);
+//            }
             
             // 处理渲染线程任务（仅 OpenGL 需要）
             // ThreadFrame 会从队列中取出任务并执行，包括 swap
             if (g_currentBackend == GraphicsBackend::OPENGL && g_glContext) {
-                if (shouldLog) {
-                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: About to call ThreadFrame...", frameNum);
-                }
+//                if (shouldLog) {
+//                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: About to call ThreadFrame...", frameNum);
+//                }
                 
                 // 在单线程模式下，我们需要处理所有排队的任务直到完成一帧
                 // ThreadFrame(true) 会阻塞直到处理完一个 PRESENT 任务
@@ -521,10 +521,11 @@ void RenderLoop() {
                 if (threadFrameTime > 0.1) {
                     OHOS_LOGW(XCOMP_TAG, "Frame %{public}d: ThreadFrame took %{public}.3fs (SLOW!), result=%{public}d", 
                               frameNum, threadFrameTime, result);
-                } else if (shouldLog) {
-                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: ThreadFrame returned %{public}d in %{public}.3fs", 
-                              frameNum, result, threadFrameTime);
-                }
+                } 
+//				else if (shouldLog) {
+//                    OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: ThreadFrame returned %{public}d in %{public}.3fs", 
+//                              frameNum, result, threadFrameTime);
+//                }
             }
             
 //            if (shouldLog) {
