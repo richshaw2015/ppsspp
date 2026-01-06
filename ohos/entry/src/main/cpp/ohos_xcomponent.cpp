@@ -485,9 +485,9 @@ void RenderLoop() {
             }
             
             // 渲染一帧 - 这会生成渲染命令并推送到队列
-            if (shouldLog) {
-                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: calling NativeFrame...", frameNum);
-            }
+//            if (shouldLog) {
+//                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: calling NativeFrame...", frameNum);
+//            }
             
             double nativeFrameStart = time_now_d();
             NativeFrame(ctx);
@@ -527,9 +527,9 @@ void RenderLoop() {
                 }
             }
             
-            if (shouldLog) {
-                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: END", frameNum);
-            }
+//            if (shouldLog) {
+//                OHOS_LOGI(XCOMP_TAG, "Frame %{public}d: END", frameNum);
+//            }
             
             frameNum++;
             
