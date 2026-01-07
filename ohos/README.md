@@ -67,6 +67,13 @@ cd ohos
 hvigorw assembleHap
 ```
 
+ffmpeg 编译：
+```sh
+git clone https://gitcode.com/openharmony-sig/tpc_c_cplusplus.git --depth=1
+vim thirdparty/FFmpeg/HPKBUILD --disable-x86asm  (./configure)
+cd lycium && ./build.sh FFmpeg
+```
+
 ### 3. 发布构建
 
 ```bash

@@ -414,7 +414,7 @@ bool MediaEngine::addVideoStream(int streamNum, int streamId) {
 		// no need to add an existing stream.
 		if ((u32)streamNum < m_pFormatCtx->nb_streams)
 			return true;
-		AVCodec *h264_codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+		const AVCodec *h264_codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 		if (!h264_codec)
 			return false;
 		AVStream *stream = avformat_new_stream(m_pFormatCtx, h264_codec);
@@ -440,7 +440,7 @@ bool MediaEngine::addVideoStream(int streamNum, int streamId) {
 			}
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
-			AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
+			const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
 			AVCodecContext *codecCtx = avcodec_alloc_context3(codec);
 #else
 			AVCodecContext *codecCtx = stream->codec;
@@ -528,7 +528,7 @@ bool MediaEngine::setVideoStream(int streamNum, bool force) {
 
 		AVStream *stream = m_pFormatCtx->streams[streamNum];
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(57, 33, 100)
-		AVCodec *pCodec = avcodec_find_decoder(stream->codecpar->codec_id);
+		const AVCodec *pCodec = avcodec_find_decoder(stream->codecpar->codec_id);
 		if (!pCodec) {
 			WARN_LOG_REPORT(Log::ME, "Could not find decoder for %d", (int)stream->codecpar->codec_id);
 			return false;
@@ -542,7 +542,7 @@ bool MediaEngine::setVideoStream(int streamNum, bool force) {
 #else
 		AVCodecContext *m_pCodecCtx = stream->codec;
 		// Find the decoder for the video stream
-		AVCodec *pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
+		const AVCodec *pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
 		if (pCodec == nullptr) {
 			return false;
 		}

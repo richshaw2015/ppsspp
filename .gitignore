@@ -158,3 +158,4 @@ cmake-build-*/
 /Windows/
 source_assets/preview/*.webp
 source_assets/preview/*.png
+/ffmpeg/ohos/

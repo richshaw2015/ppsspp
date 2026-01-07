@@ -133,7 +133,7 @@ private:
 	int channels_;
 
 	AVFrame *frame_ = nullptr;
-	AVCodec *codec_ = nullptr;
+	const AVCodec *codec_ = nullptr;
 	AVCodecContext  *codecCtx_ = nullptr;
 	SwrContext      *swrCtx_ = nullptr;
 

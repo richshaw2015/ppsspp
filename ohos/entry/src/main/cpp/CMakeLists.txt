@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Vulkan 支持选项
 option(USE_VULKAN "Enable Vulkan rendering backend" ON)
 
+# FFmpeg 支持选项 - 用于 MPEG 视频解码
+option(USE_FFMPEG "Enable FFmpeg for MPEG video decoding" ON)
+
 # 定义编译宏
 add_definitions(
     -DOHOS=1
@@ -19,6 +22,12 @@ add_definitions(
     -DGLEW_NO_GLU
     -DHTTPS_NOT_AVAILABLE
 )
+
+# FFmpeg 相关宏定义
+if(USE_FFMPEG)
+    add_definitions(-DUSE_FFMPEG=1)
+    message(STATUS "FFmpeg support enabled for MPEG video decoding")
+endif()
 
 # Vulkan 相关宏定义
 if(USE_VULKAN)
@@ -139,6 +148,86 @@ target_link_libraries(ppsspp_ohos
 # Vulkan 库链接
 if(USE_VULKAN)
     target_link_libraries(ppsspp_ohos PUBLIC vulkan)
+endif()
+
+# FFmpeg 库链接
+# 使用 OHOS 专用的预编译 FFmpeg 库（仅支持 arm64-v8a）
+if(USE_FFMPEG)
+    # OHOS 仅支持 arm64-v8a 架构
+    set(FFMPEG_DIR ${PPSSPP_ROOT}/ffmpeg/ohos/arm64-v8a)
+    
+    # 添加 FFmpeg 头文件目录
+    target_include_directories(ppsspp_ohos PRIVATE ${FFMPEG_DIR}/include)
+    
+    # 方案：使用动态库，通过 IMPORTED 目标正确链接
+    # 创建 IMPORTED 目标
+    add_library(ffmpeg_avformat SHARED IMPORTED)
+    set_target_properties(ffmpeg_avformat PROPERTIES
+        IMPORTED_LOCATION ${FFMPEG_DIR}/lib/libavformat.so.60.3.100
+    )
+    
+    add_library(ffmpeg_avcodec SHARED IMPORTED)
+    set_target_properties(ffmpeg_avcodec PROPERTIES
+        IMPORTED_LOCATION ${FFMPEG_DIR}/lib/libavcodec.so.60.3.100
+    )
+    
+    add_library(ffmpeg_swresample SHARED IMPORTED)
+    set_target_properties(ffmpeg_swresample PROPERTIES
+        IMPORTED_LOCATION ${FFMPEG_DIR}/lib/libswresample.so.4.10.100
+    )
+    
+    add_library(ffmpeg_swscale SHARED IMPORTED)
+    set_target_properties(ffmpeg_swscale PROPERTIES
+        IMPORTED_LOCATION ${FFMPEG_DIR}/lib/libswscale.so.7.1.100
+    )
+    
+    add_library(ffmpeg_avutil SHARED IMPORTED)
+    set_target_properties(ffmpeg_avutil PROPERTIES
+        IMPORTED_LOCATION ${FFMPEG_DIR}/lib/libavutil.so.58.2.100
+    )
+    
+    # 链接 IMPORTED 目标
+    target_link_libraries(ppsspp_ohos PUBLIC
+        ffmpeg_avformat
+        ffmpeg_avcodec
+        ffmpeg_swresample
+        ffmpeg_swscale
+        ffmpeg_avutil
+    )
+    
+    # 添加链接选项以处理 PIC 问题
+    target_link_options(ppsspp_ohos PRIVATE
+        -Wl,--allow-shlib-undefined
+        -Wl,--no-fatal-warnings
+    )
+    
+    # 复制动态库到输出目录
+    add_custom_command(TARGET ppsspp_ohos POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FFMPEG_DIR}/lib/libavformat.so.60.3.100
+            $<TARGET_FILE_DIR:ppsspp_ohos>/libavformat.so.60.3.100
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FFMPEG_DIR}/lib/libavcodec.so.60.3.100
+            $<TARGET_FILE_DIR:ppsspp_ohos>/libavcodec.so.60.3.100
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FFMPEG_DIR}/lib/libswresample.so.4.10.100
+            $<TARGET_FILE_DIR:ppsspp_ohos>/libswresample.so.4.10.100
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FFMPEG_DIR}/lib/libswscale.so.7.1.100
+            $<TARGET_FILE_DIR:ppsspp_ohos>/libswscale.so.7.1.100
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FFMPEG_DIR}/lib/libavutil.so.58.2.100
+            $<TARGET_FILE_DIR:ppsspp_ohos>/libavutil.so.58.2.100
+        # 创建符号链接
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libavformat.so.60.3.100 $<TARGET_FILE_DIR:ppsspp_ohos>/libavformat.so.60
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libavcodec.so.60.3.100 $<TARGET_FILE_DIR:ppsspp_ohos>/libavcodec.so.60
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libswresample.so.4.10.100 $<TARGET_FILE_DIR:ppsspp_ohos>/libswresample.so.4
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libswscale.so.7.1.100 $<TARGET_FILE_DIR:ppsspp_ohos>/libswscale.so.7
+        COMMAND ${CMAKE_COMMAND} -E create_symlink libavutil.so.58.2.100 $<TARGET_FILE_DIR:ppsspp_ohos>/libavutil.so.58
+        COMMENT "Copying FFmpeg libraries to output directory"
+    )
+    
+    message(STATUS "FFmpeg libraries linked from: ${FFMPEG_DIR}")
 endif()
 
 # ============================================================================
@@ -588,6 +677,8 @@ target_compile_definitions(Core PRIVATE
     MOBILE_DEVICE=1
     USING_GLES2=1
     USING_EGL=1
+    USE_FFMPEG=1
+#    $<$<BOOL:${USE_FFMPEG}>:USE_FFMPEG=1>
 )
 
 target_include_directories(Core PUBLIC
@@ -599,6 +690,11 @@ target_include_directories(Core PUBLIC
     ${PPSSPP_ROOT}/ext/snappy
     ${PPSSPP_ROOT}/ext/zstd/lib
 )
+
+# 添加 FFmpeg 头文件目录到 Core 库
+if(USE_FFMPEG)
+    target_include_directories(Core PUBLIC ${PPSSPP_ROOT}/ffmpeg/ohos/arm64-v8a/include)
+endif()
 
 target_link_libraries(Core PUBLIC
     # 注意：不直接链接 Common，避免重复符号

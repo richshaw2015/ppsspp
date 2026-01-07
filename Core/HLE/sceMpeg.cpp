@@ -729,7 +729,7 @@ static bool InitPmp(MpegContext * ctx){
 	pmp_want_pix_fmt = AV_PIX_FMT_RGBA;
 
 	// Create H264 video codec
-	AVCodec * pmp_Codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+	const AVCodec * pmp_Codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 	if (pmp_Codec == NULL){
 		ERROR_LOG(Log::Mpeg, "Can not find H264 codec, please update ffmpeg");
 		return false;
